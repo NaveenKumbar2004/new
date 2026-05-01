@@ -240,8 +240,8 @@ app.post('/api/book-slot', async (req, res) => {
         res.json({ status: 'success', message: 'Slot booked successfully', booking_id });
     } catch (err) {
         await connection.rollback();
-        console.error(err);
-        res.status(500).json({ status: 'error', message: 'Transaction Failed' });
+        console.error("Booking Transaction Failed:", err);
+        res.status(500).json({ status: 'error', message: 'Transaction Failed: ' + err.message });
     } finally {
         connection.release();
     }
