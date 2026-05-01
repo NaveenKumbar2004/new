@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const mysql = require('mysql2/promise');
@@ -19,6 +20,7 @@ const pool = mysql.createPool({
     password: process.env.DB_PASSWORD || 'Nave@2004',
     database: process.env.DB_NAME || 'smart_parking',
     port: process.env.DB_PORT || 3306,
+    ssl: { rejectUnauthorized: false }, // Required for Cloud DBs like Aiven
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
