@@ -180,15 +180,15 @@
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
                 btn.disabled = true;
                 
-                const success = await updateFeeOnServer(newFee);
+                const result = await updateFeeOnServer(newFee);
                 
                 btn.innerHTML = originalText;
                 btn.disabled = false;
                 
-                if (success) {
+                if (result.success) {
                     showToast('✅ Database Updated: Parking fee set to ₹' + newFee, 'success');
                 } else {
-                    showToast('❌ Update Failed: Could not connect to database', 'error');
+                    showToast('❌ Update Failed: ' + (result.message || 'Server Error'), 'error');
                 }
             } else {
                 showToast('Invalid fee amount', 'error');
@@ -239,11 +239,12 @@
                     showToast(`Slot ${slotId} deleted`, 'success');
                     renderAdminSlots();
                 } else {
+                    console.error("API Error (/api/settings):", result.message);
                     alert(result.message || 'Failed to delete slot');
                 }
             } catch (err) {
-                console.error('Delete error:', err);
-                showToast('Failed to delete slot', 'error');
+                console.error("API Error (/api/settings):", err);
+                showToast('Failed to delete slot: ' + err.message, 'error');
             }
         };
 

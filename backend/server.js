@@ -335,13 +335,24 @@ app.get('/api/settings', async (req, res) => {
 app.post('/api/settings', async (req, res) => {
     try {
         const { parking_fee } = req.body;
-        if (parking_fee !== undefined) {
-            await pool.query('INSERT INTO SystemSettings (setting_key, setting_value) VALUES ("parking_fee", ?) ON DUPLICATE KEY UPDATE setting_value = ?', 
-                [parking_fee.toString(), parking_fee.toString()]);
+        if (parking_fee) {
+            // First try to update
+            const [result] = await pool.query(
+                'UPDATE SystemSettings SET setting_value = ? WHERE setting_key = ?',
+                [parking_fee.toString(), 'parking_fee']
+            );
+            
+            // If no rows updated, it doesn't exist, so insert
+            if (result.affectedRows === 0) {
+                await pool.query(
+                    'INSERT INTO SystemSettings (setting_key, setting_value) VALUES (?, ?)',
+                    ['parking_fee', parking_fee.toString()]
+                );
+            }
         }
         res.json({ status: 'success', message: 'Settings updated' });
     } catch (err) {
-        console.error("API Error (/api/slots):", err);
+        console.error("API Error (/api/settings):", err);
         res.status(500).json({ status: 'error', message: 'DB Error: ' + err.message });
     }
 });

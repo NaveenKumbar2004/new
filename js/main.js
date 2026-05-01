@@ -81,7 +81,7 @@ const showToast = (message, type = 'success') => {
     setTimeout(() => {
         toast.style.animation = 'slideOut 0.3s forwards';
         setTimeout(() => toast.remove(), 300);
-    }, 3000);
+    }, 5000); // Stay for 5 seconds
 };
 
 // --- Local Storage Database Simulation ---
