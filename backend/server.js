@@ -234,7 +234,7 @@ app.post('/api/book-slot', async (req, res) => {
         );
 
         // Update slot status
-        await connection.query('UPDATE ParkingSlots SET status = "occupied" WHERE id = ?', [slot_id]);
+        await connection.query('UPDATE ParkingSlots SET status = \'occupied\' WHERE id = ?', [slot_id]);
 
         await connection.commit();
         res.json({ status: 'success', message: 'Slot booked successfully', booking_id });
@@ -294,7 +294,7 @@ app.post('/api/verify-vehicle', async (req, res) => {
 
         if (booking.vehicle_number === arrivingVehicle) {
             // Access Granted
-            await pool.query('UPDATE Bookings SET entry_status = "entered" WHERE id = ?', [booking.booking_id]);
+            await pool.query('UPDATE Bookings SET entry_status = \'entered\' WHERE id = ?', [booking.booking_id]);
             return res.json({
                 status: 'success',
                 message: 'Access Granted',
