@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Dashboard - Smart Parking</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background-color: var(--bg-color);
+        }
+        
+        .dashboard-nav {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--glass-border);
+        }
+    </style>
+</head>
+<body class="dashboard-bg">
+    <nav class="navbar glass">
+        <a href="index.html" class="nav-brand">
+            <i class="fas fa-parking" style="color: var(--primary-color);"></i>
+            SmartPark
+        </a>
+        <div class="nav-links" id="navLinks">
+            <!-- Populated by JS -->
+        </div>
+    </nav>
+
+    <div class="dashboard-container fade-in">
+        <div class="dashboard-header">
+            <div>
+                <h2>Live Parking Map</h2>
+                <p style="color: var(--text-muted); margin-top: 0.5rem;">Select an available slot to book</p>
+            </div>
+            
+            <div style="display: flex; gap: 1rem;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: var(--success);"></span>
+                    <span style="font-size: 0.9rem; color: var(--text-muted);">Available</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: var(--danger);"></span>
+                    <span style="font-size: 0.9rem; color: var(--text-muted);">Occupied</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="slots-grid" id="slotsGrid">
+            <!-- Slots will be populated by JS -->
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script>
+        const API_BASE = getAPI_BASE();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const userId = localStorage.getItem('user_id');
+            const userName = localStorage.getItem('user_name');
+            const navLinks = document.getElementById('navLinks');
+
+            if (userId) {
+                navLinks.innerHTML = `
+                    <span style="margin-right: 1rem; font-weight: 500;">Hi, ${userName}</span>
+                    <a href="booking-new.html" class="btn btn-primary" style="padding: 0.5rem 1rem;"><i class="fas fa-plus mr-2"></i> Book Slot</a>
+                    <a href="my-vehicles-new.html" class="btn btn-outline" style="padding: 0.5rem 1rem;"><i class="fas fa-car"></i> My Vehicles</a>
+                    <button onclick="logout()" class="btn btn-outline" style="padding: 0.5rem 1rem;">Logout</button>
+                    <button id="themeToggle" class="btn btn-outline" style="padding: 0.5rem 1rem; border-radius: 50%;">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                `;
+            } else {
+                navLinks.innerHTML = `
+                    <a href="login-new.html" class="btn btn-outline" style="padding: 0.5rem 1rem;">Login</a>
+                    <button id="themeToggle" class="btn btn-outline" style="padding: 0.5rem 1rem; border-radius: 50%;">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                `;
+            }
+
+            fetchSlots();
+            
+            setInterval(fetchSlots, 5000); // Poll every 5s
+        });
+
+        function logout() {
+            localStorage.removeItem('user_id');
+            localStorage.removeItem('username');
+            localStorage.removeItem('user_name');
+            window.location.href = 'login-new.html';
+        }
+
+        const fetchSlots = async () => {
+            const grid = document.getElementById('slotsGrid');
+            grid.innerHTML = '<div style="text-align: center; grid-column: 1/-1; padding: 2rem;"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
+            
+            try {
+                const res = await fetch(`${API_BASE}/slots`);
+                const result = await res.json();
+                
+                if (result.status === 'success') {
+                    grid.innerHTML = '';
+                    result.data.forEach((slot, index) => {
+                        const card = document.createElement('div');
+                        card.className = `slot-card glass ${slot.status}`;
+                        // Optional: delay based on index for cascade effect, clamped to 1s max
+                        card.style.animationDelay = `${Math.min(index * 0.05, 1)}s`;
+                        card.classList.add('fade-in');
+                        
+                        const icon = slot.type === 'car' ? 'fa-car-side' : 'fa-motorcycle';
+                        const statusText = slot.status === 'free' ? 'Available' : 'Occupied';
+                        
+                        card.innerHTML = `
+                            <div class="slot-icon" style="color: ${slot.status === 'free' ? 'var(--success)' : 'var(--danger)'}">
+                                <i class="fas ${slot.status === 'free' ? 'fa-parking' : icon}"></i>
+                            </div>
+                            <div>
+                                <h3 style="margin-bottom: 0.5rem; color: var(--text-color);">Slot ${slot.id}</h3>
+                                <span class="slot-status status-${slot.status}">${statusText}</span>
+                            </div>
+                        `;
+
+                        if (slot.status === 'free') {
+                            card.addEventListener('click', () => {
+                                window.location.href = `booking-new.html?slot=${slot.id}`;
+                            });
+                        } else {
+                            card.style.cursor = 'not-allowed';
+                        }
+
+                        grid.appendChild(card);
+                    });
+                }
+            } catch(e) {
+                grid.innerHTML = '<div style="color: var(--danger); text-align: center; grid-column: 1/-1;">Failed to load slots from server.</div>';
+            }
+        };
+    </script>
+</body>
+</html>

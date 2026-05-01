@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Vehicle Verification - Admin Portal</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background-color: var(--bg-color);
+        }
+        .admin-nav {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border-bottom: 2px solid var(--primary-color);
+        }
+        .verify-container {
+            padding: 6rem 5% 2rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .result-card {
+            margin-top: 2rem;
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+            display: none; /* hidden initially */
+            transform: scale(0.95);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .result-card.show {
+            display: block;
+            transform: scale(1);
+            opacity: 1;
+        }
+        .result-success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 2px solid var(--success);
+            color: var(--success);
+        }
+        .result-error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 2px solid var(--danger);
+            color: var(--danger);
+        }
+        .result-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+        .details-box {
+            margin-top: 1.5rem;
+            text-align: left;
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 8px;
+            color: var(--text-color);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar admin-nav">
+        <a href="admin-dashboard.html" class="nav-brand">
+            <i class="fas fa-shield-alt" style="color: var(--primary-color);"></i>
+            Admin Portal
+        </a>
+        <div class="nav-links">
+            <a href="admin-dashboard.html" class="btn btn-outline" style="padding: 0.5rem 1rem;">Dashboard</a>
+            <button id="themeToggle" class="btn btn-outline" style="padding: 0.5rem 1rem; border-radius: 50%;">
+                <i class="fas fa-moon"></i>
+            </button>
+        </div>
+    </nav>
+
+    <div class="verify-container fade-in">
+        <div class="glass" style="padding: 2rem;">
+            <h2 style="margin-bottom: 0.5rem; text-align: center;"><i class="fas fa-car-side"></i> Vehicle Entry Verification</h2>
+            <p style="color: var(--text-muted); text-align: center; margin-bottom: 2rem;">Verify arriving vehicles against active bookings.</p>
+            
+            <form id="verifyForm">
+                <div class="form-group">
+                    <input type="text" id="bookingId" class="form-control" placeholder=" " required style="text-transform: uppercase;">
+                    <label for="bookingId" class="floating-label">Booking ID or Slot (e.g., BKG123 or A1)</label>
+                </div>
+                
+                <div class="form-group">
+                    <input type="text" id="vehicleNum" class="form-control" placeholder=" " required style="text-transform: uppercase;">
+                    <label for="vehicleNum" class="floating-label">Arriving Vehicle Number</label>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%; font-size: 1.1rem;"><i class="fas fa-search"></i> Verify Vehicle</button>
+            </form>
+        </div>
+
+        <div id="resultCard" class="result-card">
+            <!-- Content injected by JS -->
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script>
+        const API_BASE = getAPI_BASE();
+
+        document.getElementById('verifyForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const identifier = document.getElementById('bookingId').value.trim();
+            const arrivingVehicle = document.getElementById('vehicleNum').value.trim();
+            const btn = e.target.querySelector('button');
+            const resultCard = document.getElementById('resultCard');
+            
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
+            resultCard.classList.remove('show');
+            resultCard.className = 'result-card'; // reset classes
+
+            try {
+                const res = await fetch(`${API_BASE}/verify-vehicle`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ booking_id: identifier, vehicle_number: arrivingVehicle })
+                });
+
+                const result = await res.json();
+                
+                btn.innerHTML = '<i class="fas fa-search"></i> Verify Vehicle';
+                resultCard.classList.add('show');
+
+                if (res.status === 404) {
+                    resultCard.classList.add('result-error');
+                    resultCard.innerHTML = `
+                        <i class="fas fa-times-circle result-icon"></i>
+                        <h2>Booking Not Found</h2>
+                        <p style="color: var(--text-color); margin-top: 0.5rem;">No active booking exists for ID/Slot: <strong>${identifier.toUpperCase()}</strong></p>
+                    `;
+                } else if (result.status === 'success') {
+                    const b = result.data;
+                    resultCard.classList.add('result-success');
+                    resultCard.innerHTML = `
+                        <i class="fas fa-check-circle result-icon"></i>
+                        <h2>Access Granted</h2>
+                        <p style="color: var(--text-color); margin-top: 0.5rem;">Vehicle matches the booking record.</p>
+                        
+                        <div class="details-box glass">
+                            <h4 style="margin-bottom: 0.5rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem;">Booking Details</h4>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.9rem;">
+                                <div><strong>Booking ID:</strong> ${b.booking_id}</div>
+                                <div><strong>Slot:</strong> ${b.slot_id}</div>
+                                <div><strong>Vehicle:</strong> ${b.vehicle_number}</div>
+                                <div><strong>User:</strong> ${b.user_name}</div>
+                                <div style="grid-column: 1/-1;"><strong>Status:</strong> <span style="color: var(--success); font-weight: bold;">ENTERED</span></div>
+                            </div>
+                        </div>
+                    `;
+                } else if (res.status === 403) {
+                    resultCard.classList.add('result-error');
+                    resultCard.innerHTML = `
+                        <i class="fas fa-exclamation-triangle result-icon"></i>
+                        <h2>Vehicle Mismatch</h2>
+                        <p style="color: var(--text-color); margin-top: 0.5rem;">Access Denied. The arriving vehicle does not match the booked vehicle.</p>
+                        
+                        <div class="details-box glass" style="border: 1px solid var(--danger);">
+                            <div style="display: grid; grid-template-columns: 1fr; gap: 0.5rem; font-size: 0.9rem;">
+                                <div><strong>Expected Vehicle:</strong> <span style="font-family: monospace;">${result.details.expected}</span></div>
+                                <div><strong>Arriving Vehicle:</strong> <span style="font-family: monospace; color: var(--danger);">${result.details.arrived}</span></div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch(e) {
+                btn.innerHTML = '<i class="fas fa-search"></i> Verify Vehicle';
+                showToast(e.message || 'Verification Failed', 'error');
+            }
+        });
+    </script>
+</body>
+</html>

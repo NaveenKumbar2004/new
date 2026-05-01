@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>User Login - Smart Parking</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="auth-container">
+        <a href="index.html" style="position: absolute; top: 2rem; left: 2rem; color: white; text-decoration: none; font-size: 1.2rem; z-index: 10;">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+        
+        <div class="auth-card glass fade-in">
+            <div class="auth-header">
+                <i class="fas fa-user-circle" style="font-size: 3rem; color: var(--primary-color); margin-bottom: 1rem;"></i>
+                <h2>Welcome Back</h2>
+                <p style="color: var(--text-muted); margin-top: 0.5rem;">Sign in to your parking account</p>
+            </div>
+            
+            <form id="loginForm">
+                <div class="form-group">
+                    <input type="text" id="username" class="form-control" placeholder=" " required>
+                    <label for="username" class="floating-label">Username or Email</label>
+                </div>
+                
+                <div class="form-group">
+                    <input type="password" id="password" class="form-control" placeholder=" " required>
+                    <label for="password" class="floating-label">Password</label>
+                    <i class="fas fa-eye password-toggle"></i>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; margin-bottom: 1.5rem; font-size: 0.9rem;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-color);">
+                        <input type="checkbox"> Remember me
+                    </label>
+                    <a href="#" style="color: var(--primary-color); text-decoration: none;">Forgot Password?</a>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Sign In</button>
+            </form>
+            
+            <div style="text-align: center; margin-top: 2rem; font-size: 0.9rem; color: var(--text-color);">
+                Don't have an account? <a href="register-new.html" style="color: var(--primary-color); text-decoration: none; font-weight: 500;">Register here</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script>
+        const API_BASE = getAPI_BASE();
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            const originalText = btn.innerHTML;
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+
+            console.log('Frontend: Starting login for', username);
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Authenticating...';
+            
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+                
+                console.log('Frontend: Sending fetch request');
+                const res = await fetch(`${API_BASE}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password }),
+                    signal: controller.signal
+                });
+                
+                console.log('Frontend: Got response, status:', res.status);
+                clearTimeout(timeoutId);
+                const result = await res.json();
+                console.log('Frontend: Parsed response:', result);
+
+                console.log('Frontend: Checking response status:', result.status);
+                if (result.status === 'success') {
+                    console.log('Frontend: Login successful, saving data');
+                    alert('Login successful! Redirecting...');
+                    
+                    // Save to local storage
+                    const userId = result.data.id;
+                    const username = result.data.username;
+                    const userName = result.data.name || result.data.username;
+                    
+                    console.log('Frontend: Saving to localStorage:', { userId, username, userName });
+                    localStorage.setItem('user_id', userId);
+                    localStorage.setItem('username', username);
+                    localStorage.setItem('user_name', userName);
+
+                    console.log('Frontend: Redirecting to dashboard immediately');
+                    window.location.href = 'dashboard-new.html';
+                } else {
+                    alert(result.message);
+                    btn.innerHTML = originalText;
+                }
+            } catch (err) {
+                if (err.name === 'AbortError') {
+                    alert('Request timeout - please try again');
+                } else {
+                    alert('Network error: ' + err.message);
+                }
+                btn.innerHTML = originalText;
+            }
+        });
+    </script>
+</body>
+</html>

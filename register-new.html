@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Register - Smart Parking</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="auth-container">
+        <a href="index.html" style="position: absolute; top: 2rem; left: 2rem; color: white; text-decoration: none; font-size: 1.2rem; z-index: 10;">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+        
+        <div class="auth-card glass fade-in">
+            <div class="auth-header">
+                <i class="fas fa-car-side" style="font-size: 3rem; color: var(--primary-color); margin-bottom: 1rem;"></i>
+                <h2>Create Account</h2>
+                <p style="color: var(--text-muted); margin-top: 0.5rem;">Join the smart parking network</p>
+            </div>
+            
+            <form id="registerForm">
+                <div class="form-group">
+                    <input type="text" id="fullName" class="form-control" placeholder=" " required>
+                    <label for="fullName" class="floating-label">Full Name</label>
+                </div>
+
+                <div class="form-group">
+                    <input type="text" id="username" class="form-control" placeholder=" " required>
+                    <label for="username" class="floating-label">Username</label>
+                </div>
+                
+                <div class="form-group">
+                    <input type="text" id="vehicleNumber" class="form-control" placeholder=" " required style="text-transform: uppercase;">
+                    <label for="vehicleNumber" class="floating-label">Vehicle Number (e.g. MH-12-AB-1234)</label>
+                </div>
+                
+                <div class="form-group">
+                    <input type="password" id="regPassword" class="form-control" placeholder=" " required>
+                    <label for="regPassword" class="floating-label">Password</label>
+                    <i class="fas fa-eye password-toggle"></i>
+                </div>
+
+                <div class="form-group">
+                    <input type="password" id="confirmPassword" class="form-control" placeholder=" " required>
+                    <label for="confirmPassword" class="floating-label">Confirm Password</label>
+                    <i class="fas fa-eye password-toggle"></i>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Verifying Credentials...</button>
+            </form>
+            
+            <div style="text-align: center; margin-top: 2rem; font-size: 0.9rem; color: var(--text-color);">
+                Already have an account? <a href="login-new.html" style="color: var(--primary-color); text-decoration: none; font-weight: 500;">Sign in</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script>
+        const API_BASE = getAPI_BASE();
+
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const fullName = document.getElementById('fullName').value.trim();
+            const username = document.getElementById('username').value.trim();
+            const vehicleNumber = document.getElementById('vehicleNumber').value.trim().toUpperCase();
+            const password = document.getElementById('regPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (password !== confirmPassword) {
+                alert('Passwords do not match!');
+                return;
+            }
+            
+            const btn = e.target.querySelector('button');
+            const originalText = btn.innerHTML;
+            
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating Account...';
+            btn.disabled = true;
+            
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                
+                const res = await fetch(`${API_BASE}/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        name: fullName, 
+                        username: username, 
+                        password: password,
+                        vehicle_number: vehicleNumber
+                    }),
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                const result = await res.json();
+
+                if (result.status === 'success') {
+                    alert('Registration successful! Please login.');
+                    window.location.href = 'login-new.html';
+                } else {
+                    alert(result.message || 'Registration failed');
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                if (err.name === 'AbortError') {
+                    alert('Request timeout - please try again');
+                } else {
+                    alert('Network error: ' + err.message);
+                }
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

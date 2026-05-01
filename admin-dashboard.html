@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Admin Dashboard - Smart Parking</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background-color: var(--bg-color);
+        }
+        .admin-nav {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border-bottom: 2px solid var(--primary-color);
+        }
+        .admin-container {
+            padding: 6rem 5% 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .admin-section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--glass-border);
+            color: var(--text-color);
+        }
+        th {
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-size: 0.85rem;
+        }
+        .action-btn {
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+        .badge {
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body class="dashboard-bg">
+    <nav class="navbar admin-nav">
+        <a href="admin-dashboard.html" class="nav-brand">
+            <i class="fas fa-shield-alt" style="color: var(--primary-color);"></i>
+            Admin Portal
+        </a>
+        <div class="nav-links">
+            <a href="admin-verify.html" class="btn btn-primary" style="padding: 0.5rem 1rem;"><i class="fas fa-search"></i> Verify Entry</a>
+            <button id="themeToggle" class="btn btn-outline" style="padding: 0.5rem 1rem; border-radius: 50%;">
+                <i class="fas fa-moon"></i>
+            </button>
+            <a href="index.html" class="btn btn-outline" style="padding: 0.5rem 1rem; border-radius: 50%;">
+                <i class="fas fa-sign-out-alt"></i>
+            </a>
+        </div>
+    </nav>
+
+    <div class="admin-container fade-in">
+        <h2 style="margin-bottom: 2rem;">System Management</h2>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+            <!-- Settings Section -->
+            <div class="admin-section glass">
+                <h3 style="margin-bottom: 1rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem;"><i class="fas fa-cog"></i> Global Settings</h3>
+                <div style="display: flex; gap: 1rem; align-items: flex-end;">
+                    <div class="form-group" style="margin-bottom: 0; flex: 1;">
+                        <input type="number" step="0.01" id="feeInput" class="form-control" required>
+                        <label for="feeInput" class="floating-label" style="top: 0; font-size: 0.8rem; color: var(--primary-color);">Parking Fee Per Hour (₹)</label>
+                    </div>
+                    <button class="btn btn-primary" onclick="window.saveFee(event)">Update Fee</button>
+                </div>
+            </div>
+
+            <!-- Add Slot Section -->
+            <div class="admin-section glass">
+                <h3 style="margin-bottom: 1rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem;"><i class="fas fa-plus-circle"></i> Add Parking Slot</h3>
+                <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+                    <div class="form-group" style="margin-bottom: 0; flex: 2; min-width: 120px;">
+                        <input type="text" id="newSlotId" class="form-control" placeholder="e.g. F1" required style="text-transform: uppercase;">
+                        <label for="newSlotId" class="floating-label" style="top: 0; font-size: 0.8rem; color: var(--primary-color);">Slot ID</label>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 120px;">
+                        <select id="newSlotType" class="form-control">
+                            <option value="car">Car</option>
+                            <option value="bike">Bike</option>
+                        </select>
+                        <label for="newSlotType" class="floating-label" style="top: 0; font-size: 0.8rem; color: var(--primary-color);">Type</label>
+                    </div>
+                    <button class="btn btn-primary" onclick="addNewSlot()">Add Slot</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slot Management Table -->
+        <div class="admin-section glass">
+            <h3 style="margin-bottom: 1rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem;"><i class="fas fa-th"></i> Manage Slots</h3>
+            <div style="max-height: 400px; overflow-y: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Slot ID</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="slotsTableBody">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Bookings Section -->
+        <div class="admin-section glass">
+            <h3 style="margin-bottom: 1rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem;"><i class="fas fa-list-alt"></i> Recent Bookings</h3>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Booking ID</th>
+                            <th>User</th>
+                            <th>Slot</th>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Cost</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bookingsTableBody">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script>
+        // Set API_BASE on window to ensure it's globally accessible but not redeclared as const
+        window.API_BASE = getAPI_BASE();
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            initDB(); 
+            
+            // Sync current fee from server
+            const serverFee = await fetchSettingsFromServer();
+            document.getElementById('feeInput').value = serverFee;
+            
+            renderAdminSlots();
+            renderAdminBookings();
+        });
+
+        window.saveFee = async (e) => {
+            const btn = e.target;
+            const originalText = btn.innerHTML;
+            const newFee = document.getElementById('feeInput').value;
+            
+            if (newFee && newFee > 0) {
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+                btn.disabled = true;
+                
+                const success = await updateFeeOnServer(newFee);
+                
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                
+                if (success) {
+                    showToast('✅ Database Updated: Parking fee set to ₹' + newFee, 'success');
+                } else {
+                    showToast('❌ Update Failed: Could not connect to database', 'error');
+                }
+            } else {
+                showToast('Invalid fee amount', 'error');
+            }
+        };
+
+        window.addNewSlot = async () => {
+            const slotInput = document.getElementById('newSlotId');
+            const typeInput = document.getElementById('newSlotType');
+            const slotId = slotInput.value.trim().toUpperCase();
+            
+            if (!slotId) {
+                showToast('Slot ID cannot be empty', 'error');
+                return;
+            }
+
+            try {
+                const res = await fetch(`${window.API_BASE}/add-slot`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ slot_id: slotId, type: typeInput.value })
+                });
+                const result = await res.json();
+                
+                if (result.status === 'success') {
+                    showToast(`Slot ${slotId} added successfully`, 'success');
+                    slotInput.value = '';
+                    renderAdminSlots();
+                } else {
+                    showToast(result.message, 'error');
+                }
+            } catch (err) {
+                showToast('Failed to add slot', 'error');
+            }
+        };
+
+        window.removeSlot = async (slotId) => {
+            console.log('Admin: Attempting to delete slot', slotId);
+            if (!confirm(`Are you sure you want to delete Slot ${slotId}?`)) return;
+
+            try {
+                const res = await fetch(`${window.API_BASE}/delete-slot/${slotId}`, {
+                    method: 'DELETE'
+                });
+                const result = await res.json();
+
+                if (result.status === 'success') {
+                    showToast(`Slot ${slotId} deleted`, 'success');
+                    renderAdminSlots();
+                } else {
+                    alert(result.message || 'Failed to delete slot');
+                }
+            } catch (err) {
+                console.error('Delete error:', err);
+                showToast('Failed to delete slot', 'error');
+            }
+        };
+
+        const renderAdminSlots = async () => {
+            const tbody = document.getElementById('slotsTableBody');
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;"><i class="fas fa-spinner fa-spin"></i></td></tr>';
+            
+            try {
+                const res = await fetch(`${window.API_BASE}/slots`);
+                const result = await res.json();
+                
+                if(result.status === 'success') {
+                    tbody.innerHTML = '';
+                    result.data.forEach(slot => {
+                        const tr = document.createElement('tr');
+                        const statusColor = slot.status === 'free' ? 'var(--success)' : 'var(--danger)';
+                        
+                        tr.innerHTML = `
+                            <td style="font-weight: 600;">${slot.id}</td>
+                            <td><span class="badge" style="background: var(--glass-bg);">${slot.type.toUpperCase()}</span></td>
+                            <td><span style="color: ${statusColor}; font-weight: 500;">${slot.status.toUpperCase()}</span></td>
+                            <td>
+                                <button class="btn btn-outline action-btn delete-btn" data-id="${slot.id}" style="color: var(--danger); border-color: var(--danger);">Delete</button>
+                            </td>
+                        `;
+
+                        tr.querySelector('.delete-btn').addEventListener('click', () => {
+                            window.removeSlot(slot.id);
+                        });
+
+                        tbody.appendChild(tr);
+                    });
+                }
+            } catch(e) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--danger);">Failed to load slots.</td></tr>';
+            }
+        };
+
+        const renderAdminBookings = async () => {
+            const tbody = document.getElementById('bookingsTableBody');
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;"><i class="fas fa-spinner fa-spin"></i></td></tr>';
+            
+            try {
+                const res = await fetch(`${window.API_BASE}/bookings`);
+                const result = await res.json();
+
+                if(result.status === 'success') {
+                    tbody.innerHTML = '';
+                    if (result.data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">No bookings found</td></tr>';
+                        return;
+                    }
+
+                    result.data.forEach(booking => {
+                        const tr = document.createElement('tr');
+                        const statusColor = booking.entry_status === 'entered' ? 'var(--success)' : 'var(--text-muted)';
+                        
+                        tr.innerHTML = `
+                            <td style="font-family: monospace; font-size: 0.8rem;">${booking.id}</td>
+                            <td style="font-weight: 500;">${booking.user_name || 'User'} <br> <small style="color:var(--text-muted)">${booking.vehicle_number || ''}</small></td>
+                            <td style="font-weight: 600; color: var(--primary-color);">${booking.slot_id}</td>
+                            <td>${new Date(booking.date).toLocaleDateString()}</td>
+                            <td>${booking.start_time} - ${booking.end_time}</td>
+                            <td style="font-weight: 600;">₹${booking.total_cost}</td>
+                            <td><span style="color: ${statusColor}; font-size: 0.85rem;">${booking.entry_status.toUpperCase()}</span></td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+            } catch(e) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--danger);">Failed to load bookings.</td></tr>';
+            }
+        };
+    </script>
+</body>
+</html>

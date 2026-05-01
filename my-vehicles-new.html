@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>My Vehicles - Smart Parking</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .vehicles-container {
+            padding: 6rem 5% 2rem;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .vehicle-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid var(--primary-color);
+        }
+        .vehicle-details {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        .vehicle-icon {
+            font-size: 2rem;
+            color: var(--primary-color);
+        }
+        .add-vehicle-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 1rem;
+            align-items: flex-end;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar glass">
+        <a href="dashboard-new.html" class="nav-brand">
+            <i class="fas fa-parking" style="color: var(--primary-color);"></i>
+            SmartPark
+        </a>
+        <div class="nav-links">
+            <a href="dashboard-new.html" class="btn btn-outline" style="padding: 0.5rem 1rem;">Dashboard</a>
+            <button id="themeToggle" class="btn btn-outline" style="padding: 0.5rem 1rem; border-radius: 50%;">
+                <i class="fas fa-moon"></i>
+            </button>
+        </div>
+    </nav>
+
+    <div class="vehicles-container fade-in">
+        <h2 style="margin-bottom: 0.5rem;">My Vehicles</h2>
+        <p style="color: var(--text-muted); margin-bottom: 2rem;">Manage the vehicles you use for parking.</p>
+
+        <!-- Add Vehicle Form -->
+        <div class="glass add-vehicle-form">
+            <div class="form-group" style="margin-bottom: 0;">
+                <input type="text" id="vNumber" class="form-control" placeholder="e.g. MH-12-AB-1234" required style="text-transform: uppercase;">
+                <label for="vNumber" class="floating-label">Vehicle Number</label>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 0;">
+                <select id="vType" class="form-control" required style="appearance: none;">
+                    <option value="" disabled selected>Select Type</option>
+                    <option value="car">Car</option>
+                    <option value="bike">Bike</option>
+                </select>
+                <i class="fas fa-chevron-down" style="position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none;"></i>
+                <label for="vType" class="floating-label" style="top: 0; font-size: 0.8rem; color: var(--primary-color);">Vehicle Type</label>
+            </div>
+            
+            <button class="btn btn-primary" onclick="addVehicle()" style="height: 48px;"><i class="fas fa-plus"></i> Add</button>
+        </div>
+
+        <!-- Vehicle List -->
+        <div id="vehicleList">
+            <!-- Populated by JS -->
+            <div style="text-align: center; color: var(--text-muted); padding: 2rem;"><i class="fas fa-spinner fa-spin"></i> Loading vehicles...</div>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script>
+        const API_BASE = getAPI_BASE();
+        
+        let currentUserId = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            currentUserId = localStorage.getItem('user_id');
+            if (!currentUserId) {
+                window.location.href = 'login-new.html';
+                return;
+            }
+            fetchVehicles();
+        });
+
+        async function fetchVehicles() {
+            try {
+                const res = await fetch(`${API_BASE}/vehicles/${currentUserId}`);
+                const result = await res.json();
+                const list = document.getElementById('vehicleList');
+                list.innerHTML = '';
+
+                if (result.data.length === 0) {
+                    list.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 2rem;">No vehicles found. Add one above!</div>';
+                    return;
+                }
+
+                result.data.forEach(v => {
+                    const icon = v.vehicle_type === 'car' ? 'fa-car-side' : 'fa-motorcycle';
+                    const html = `
+                        <div class="glass vehicle-card fade-in">
+                            <div class="vehicle-details">
+                                <i class="fas ${icon} vehicle-icon"></i>
+                                <div>
+                                    <h3 style="margin-bottom: 0.25rem;">${v.vehicle_number}</h3>
+                                    <span style="font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase;">${v.vehicle_type}</span>
+                                </div>
+                            </div>
+                            <button class="btn btn-outline" onclick="deleteVehicle(${v.id})" style="color: var(--danger); border-color: var(--danger); padding: 0.5rem 1rem;">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                    list.innerHTML += html;
+                });
+            } catch (err) {
+                console.error(err);
+                showToast('Failed to fetch vehicles', 'error');
+            }
+        }
+
+        async function addVehicle() {
+            const vNumber = document.getElementById('vNumber').value;
+            const vType = document.getElementById('vType').value;
+
+            if (!vNumber || !vType) {
+                showToast('Please fill all fields', 'error');
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/add-vehicle`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'x-user-id': currentUserId
+                    },
+                    body: JSON.stringify({ vehicle_number: vNumber, vehicle_type: vType })
+                });
+                const result = await res.json();
+
+                if (result.status === 'success') {
+                    showToast('Vehicle added!', 'success');
+                    document.getElementById('vNumber').value = '';
+                    document.getElementById('vType').value = '';
+                    fetchVehicles();
+                } else {
+                    showToast(result.message, 'error');
+                }
+            } catch (err) {
+                showToast('Network error', 'error');
+            }
+        }
+
+        async function deleteVehicle(id) {
+            if (!confirm('Delete this vehicle?')) return;
+            
+            try {
+                const res = await fetch(`${API_BASE}/delete-vehicle/${id}`, { 
+                    method: 'DELETE',
+                    headers: { 'x-user-id': currentUserId }
+                });
+                const result = await res.json();
+                
+                if (result.status === 'success') {
+                    showToast('Vehicle deleted', 'success');
+                    fetchVehicles();
+                }
+            } catch (err) {
+                showToast('Network error', 'error');
+            }
+        }
+    </script>
+</body>
+</html>

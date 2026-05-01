@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Smart Parking System</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar glass">
+        <a href="index.html" class="nav-brand">
+            <i class="fas fa-parking" style="color: var(--primary-color);"></i>
+            SmartPark
+        </a>
+        <div class="nav-links" id="navLinks">
+            <!-- Populated dynamically -->
+        </div>
+    </nav>
+
+    <section class="hero">
+        <video autoplay muted loop playsinline class="hero-video">
+            <source src="assets/hero-video.mp4" type="video/mp4">
+        </video>
+        <div class="hero-content fade-in">
+            <h1>Smart Parking<br>Made Simple</h1>
+            <p>Find, book, and manage your parking seamlessly with our premium intelligent parking ecosystem.</p>
+            <div style="display: flex; gap: 1rem; justify-content: center;">
+                <a href="login-new.html" id="ctaButton" class="btn btn-primary" style="font-size: 1.1rem; padding: 1rem 2rem;">Login</a>
+                <a href="#how-it-works" class="btn btn-outline" style="color: white; border-color: rgba(255,255,255,0.3); font-size: 1.1rem; padding: 1rem 2rem;">Learn More</a>
+            </div>
+        </div>
+    </section>
+
+    <section id="how-it-works" class="dashboard-container" style="padding-top: 4rem;">
+        <h2 style="text-align: center; margin-bottom: 3rem; font-size: 2.5rem;">How It Works</h2>
+        <div class="slots-grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
+            <div class="slot-card glass fade-in" style="padding: 2.5rem; cursor: default;">
+                <div class="slot-icon" style="color: var(--primary-color); font-size: 3rem;"><i class="fas fa-user-plus"></i></div>
+                <h3>1. Quick Registration</h3>
+                <p style="color: var(--text-muted); font-size: 0.95rem;">Create an account and register your vehicle in seconds to join our smart network.</p>
+            </div>
+            <div class="slot-card glass fade-in" style="padding: 2.5rem; cursor: default; animation-delay: 0.2s;">
+                <div class="slot-icon" style="color: var(--primary-color); font-size: 3rem;"><i class="fas fa-map-marked-alt"></i></div>
+                <h3>2. Find Your Slot</h3>
+                <p style="color: var(--text-muted); font-size: 0.95rem;">Browse live availability across our parking zones and find the perfect spot for your vehicle.</p>
+            </div>
+            <div class="slot-card glass fade-in" style="padding: 2.5rem; cursor: default; animation-delay: 0.4s;">
+                <div class="slot-icon" style="color: var(--primary-color); font-size: 3rem;"><i class="fas fa-calendar-check"></i></div>
+                <h3>3. Instant Booking</h3>
+                <p style="color: var(--text-muted); font-size: 0.95rem;">Secure your slot instantly with our seamless booking system and get a unique booking ID.</p>
+            </div>
+            <div class="slot-card glass fade-in" style="padding: 2.5rem; cursor: default; animation-delay: 0.6s;">
+                <div class="slot-icon" style="color: var(--primary-color); font-size: 3rem;"><i class="fas fa-id-card-clip"></i></div>
+                <h3>4. Easy Verification</h3>
+                <p style="color: var(--text-muted); font-size: 0.95rem;">Show your booking ID at the entry for quick vehicle verification and hassle-free parking.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="about-us" class="dashboard-container" style="padding-top: 4rem; padding-bottom: 6rem;">
+        <div class="glass fade-in" style="max-width: 800px; margin: 0 auto; padding: 4rem; text-align: center;">
+            <i class="fas fa-parking" style="font-size: 4rem; color: var(--primary-color); margin-bottom: 1.5rem;"></i>
+            <h2 style="margin-bottom: 1.5rem; font-size: 2.5rem;">About SmartPark</h2>
+            <p style="margin-bottom: 2rem; line-height: 1.8; font-size: 1.1rem; color: var(--text-color);">Our Smart Parking System provides a seamless and efficient way to manage urban parking spaces in real-time. We are committed to reducing traffic congestion and improving the urban living experience through intelligent slot management.</p>
+            <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 2rem; background: rgba(255,255,255,0.05); padding: 2rem; border-radius: 12px; border: 1px solid var(--glass-border);">
+                <div style="font-size: 1.1rem;"><i class="fas fa-envelope" style="color: var(--primary-color); width: 30px;"></i> naveenbasavarajk@gmail.com</div>
+                <div style="font-size: 1.1rem;"><i class="fas fa-phone" style="color: var(--primary-color); width: 30px;"></i> 8073103217</div>
+            </div>
+        </div>
+    </section>
+
+    <script src="js/main.js"></script>
+    <script>
+        // Navbar scroll effect
+        window.addEventListener('scroll', () => {
+            const nav = document.querySelector('.navbar');
+            if (window.scrollY > 50) {
+                nav.style.background = 'var(--card-bg)';
+                nav.style.boxShadow = 'var(--glass-shadow)';
+            } else {
+                nav.style.background = 'transparent';
+                nav.style.boxShadow = 'none';
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const userId = localStorage.getItem('user_id');
+            const navLinks = document.getElementById('navLinks');
+            const ctaButton = document.getElementById('ctaButton');
+
+            if (userId) {
+                navLinks.innerHTML = `
+                    <a href="#about-us" class="btn btn-outline" style="border:none">About Us</a>
+                    <a href="login-new.html" class="btn btn-primary">Login</a>
+                    <a href="admin-login.html" class="btn btn-outline">Admin Portal</a>
+                    <button id="themeToggle" class="btn btn-outline" style="padding: 0.5rem 1rem; border-radius: 50%;">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                `;
+                ctaButton.href = 'login-new.html';
+                ctaButton.textContent = 'Login';
+            } else {
+                navLinks.innerHTML = `
+                    <a href="#about-us" class="btn btn-outline" style="border:none">About Us</a>
+                    <a href="login-new.html" class="btn btn-primary">Login</a>
+                    <a href="admin-login.html" class="btn btn-outline">Admin Portal</a>
+                    <button id="themeToggle" class="btn btn-outline" style="padding: 0.5rem 1rem; border-radius: 50%;">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>

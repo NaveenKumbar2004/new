@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Book Slot - Smart Parking</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .booking-container {
+            padding: 6rem 5% 2rem;
+            max-width: 1000px;
+            margin: 0 auto;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar glass">
+        <a href="dashboard-new.html" class="nav-brand">
+            <i class="fas fa-parking" style="color: var(--primary-color);"></i>
+            SmartPark
+        </a>
+        <div class="nav-links">
+            <a href="dashboard-new.html" class="btn btn-outline" style="padding: 0.5rem 1rem;">Back to Dashboard</a>
+            <button id="themeToggle" class="btn btn-outline" style="padding: 0.5rem 1rem; border-radius: 50%;">
+                <i class="fas fa-moon"></i>
+            </button>
+        </div>
+    </nav>
+
+    <div class="booking-container fade-in">
+        <div style="margin-bottom: 2rem;">
+            <h2>Book Parking Slot</h2>
+            <p style="color: var(--text-muted); margin-top: 0.5rem;">Fill in the details to secure your spot.</p>
+        </div>
+
+        <div class="booking-grid">
+            <div class="booking-form-card glass">
+                <form id="bookingForm">
+                    <div class="form-group">
+                        <select id="slotSelect" class="form-control" required style="appearance: none;">
+                            <option value="" disabled selected>Select a slot</option>
+                            <!-- Populated by JS -->
+                        </select>
+                        <i class="fas fa-chevron-down" style="position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none;"></i>
+                        <label for="slotSelect" class="floating-label" style="top: 0; font-size: 0.8rem; color: var(--primary-color);">Selected Slot</label>
+                    </div>
+
+                    <div class="form-group">
+                        <input type="date" id="bookingDate" class="form-control" required>
+                        <label for="bookingDate" class="floating-label" style="top: 0; font-size: 0.8rem; color: var(--primary-color);">Date</label>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="form-group">
+                            <input type="time" id="startTime" class="form-control" required>
+                            <label for="startTime" class="floating-label" style="top: 0; font-size: 0.8rem; color: var(--primary-color);">Start Time</label>
+                        </div>
+                        <div class="form-group">
+                            <input type="time" id="endTime" class="form-control" required>
+                            <label for="endTime" class="floating-label" style="top: 0; font-size: 0.8rem; color: var(--primary-color);">End Time</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <select id="vehicleNum" class="form-control" required style="appearance: none;">
+                            <option value="" disabled selected>Select your vehicle</option>
+                            <!-- Populated by JS -->
+                        </select>
+                        <i class="fas fa-chevron-down" style="position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none;"></i>
+                        <label for="vehicleNum" class="floating-label" style="top: 0; font-size: 0.8rem; color: var(--primary-color);">Vehicle</label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem; font-size: 1.1rem;">Confirm Booking</button>
+                </form>
+            </div>
+
+            <div class="booking-summary glass">
+                <div>
+                    <h3 style="margin-bottom: 1.5rem; color: var(--text-color); border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem;">Booking Summary</h3>
+                    
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                        <span style="color: var(--text-muted);">Rate per hour</span>
+                        <span id="displayFee" style="font-weight: 600; color: var(--text-color);">₹0.00</span>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                        <span style="color: var(--text-muted);">Estimated Duration</span>
+                        <span id="estDuration" style="font-weight: 600; color: var(--text-color);">-</span>
+                    </div>
+                </div>
+
+                <div style="margin-top: 2rem; border-top: 1px solid var(--glass-border); padding-top: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 1.2rem; font-weight: 600; color: var(--text-color);">Total Estimated</span>
+                        <span id="estTotal" style="font-size: 1.5rem; font-weight: 700; color: var(--primary-color);">₹0.00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script>
+        const API_BASE = getAPI_BASE();
+        let currentUserId = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            initDB(); // only for fee
+            
+            currentUserId = localStorage.getItem('user_id');
+            if (!currentUserId) {
+                window.location.href = 'login-new.html';
+                return;
+            }
+
+            try {
+                // Populate slots from API
+                const slotRes = await fetch(`${API_BASE}/slots`);
+                const slotResult = await slotRes.json();
+                
+                const select = document.getElementById('slotSelect');
+                if (slotResult.status === 'success') {
+                    const freeSlots = slotResult.data.filter(s => s.status === 'free');
+                    freeSlots.forEach(slot => {
+                        const opt = document.createElement('option');
+                        opt.value = slot.id;
+                        opt.textContent = 'Slot ' + slot.id;
+                        select.appendChild(opt);
+                    });
+                }
+
+                // Populate user vehicles from API
+                const vRes = await fetch(`${API_BASE}/vehicles/${currentUserId}`);
+                const vResult = await vRes.json();
+                
+                const vSelect = document.getElementById('vehicleNum');
+                if (vResult.status === 'success') {
+                    vResult.data.forEach(v => {
+                        const opt = document.createElement('option');
+                        opt.value = v.id; // Store vehicle ID
+                        opt.textContent = `${v.vehicle_number} (${v.vehicle_type.toUpperCase()})`;
+                        vSelect.appendChild(opt);
+                    });
+                }
+            } catch(e) {
+                console.error("API Error:", e);
+                showToast("Failed to load data from server", "error");
+            }
+
+            // Auto-select slot if passed in URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const slotParam = urlParams.get('slot');
+            if (slotParam) {
+                if (select.querySelector(`option[value="${slotParam}"]`)) {
+                    select.value = slotParam;
+                }
+            }
+
+            // Set min date to today
+            const dateInput = document.getElementById('bookingDate');
+            const today = new Date().toISOString().split('T')[0];
+            dateInput.min = today;
+            dateInput.value = today;
+
+            // Display dynamic fee
+            const currentFee = getFee();
+            document.getElementById('displayFee').textContent = `₹${currentFee.toFixed(2)}`;
+
+            // Calculate estimated cost
+            const startInput = document.getElementById('startTime');
+            const endInput = document.getElementById('endTime');
+            const durationSpan = document.getElementById('estDuration');
+            const totalSpan = document.getElementById('estTotal');
+            
+            let finalCost = 0;
+
+            const calculateCost = () => {
+                if (startInput.value && endInput.value) {
+                    const start = new Date(`2000-01-01T${startInput.value}`);
+                    const end = new Date(`2000-01-01T${endInput.value}`);
+                    
+                    let diffHrs = (end - start) / (1000 * 60 * 60);
+                    if (diffHrs < 0) diffHrs += 24; // Handle passing midnight
+                    
+                    if (diffHrs > 0) {
+                        finalCost = diffHrs * currentFee;
+                        durationSpan.textContent = `${diffHrs.toFixed(1)} hrs`;
+                        totalSpan.textContent = `₹${finalCost.toFixed(2)}`;
+                        return;
+                    }
+                }
+                durationSpan.textContent = '-';
+                totalSpan.textContent = '₹0.00';
+                finalCost = 0;
+            };
+
+            startInput.addEventListener('change', calculateCost);
+            endInput.addEventListener('change', calculateCost);
+
+            // Handle submission
+            document.getElementById('bookingForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const select = document.getElementById('slotSelect');
+                const vSelect = document.getElementById('vehicleNum');
+
+                if (!select.value || !vSelect.value) {
+                    showToast('Please select a slot and vehicle', 'error');
+                    return;
+                }
+
+                const btn = e.target.querySelector('button');
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+                
+                try {
+                    const res = await fetch(`${API_BASE}/book-slot`, {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'x-user-id': currentUserId
+                        },
+                        body: JSON.stringify({
+                            slot_id: select.value,
+                            vehicle_id: vSelect.value,
+                            date: dateInput.value,
+                            start_time: startInput.value,
+                            end_time: endInput.value,
+                            total_cost: finalCost.toFixed(2)
+                        })
+                    });
+
+                    const result = await res.json();
+
+                    if (result.status === 'success') {
+                        btn.innerHTML = '<i class="fas fa-check"></i> Booked Successfully!';
+                        btn.style.background = 'var(--success)';
+                        showToast('Slot booked successfully!', 'success');
+                        
+                        setTimeout(() => {
+                            window.location.href = 'dashboard-new.html';
+                        }, 300);
+                    } else {
+                        btn.innerHTML = 'Confirm Booking';
+                        showToast(result.message, 'error');
+                    }
+                } catch(err) {
+                    btn.innerHTML = 'Confirm Booking';
+                    showToast('Network error', 'error');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
