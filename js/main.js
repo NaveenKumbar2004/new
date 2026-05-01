@@ -105,11 +105,17 @@ const setFee = (fee) => localStorage.setItem(DB_KEYS.FEE, fee.toString());
 
 // --- Backend Sync Functions ---
 const getAPI_BASE = () => {
-    // If we're on localhost, use the local backend port 3000
-    // If we're deployed, use the current origin
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    return isLocal ? 'http://localhost:3000/api' : window.location.origin + '/api';
+    const hostname = window.location.hostname;
+    const isLocal = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.') || hostname.startsWith('10.');
+    
+    if (isLocal) {
+        // If we are on a local network/machine, always try to reach the backend on port 3000
+        return `http://${hostname}:3000/api`;
+    }
+    // For production (e.g. Render/Heroku), the frontend and backend are usually on the same origin
+    return window.location.origin + '/api';
 };
+
 
 const fetchSettingsFromServer = async () => {
     const base = getAPI_BASE();

@@ -23,7 +23,10 @@
                 <p style="color: var(--text-muted); margin-top: 0.5rem;">Sign in to your parking account</p>
             </div>
             
+            <div id="loginError" style="color: var(--danger); background: rgba(255, 71, 87, 0.1); padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem; display: none; text-align: center; font-size: 0.9rem; border: 1px solid var(--danger);"></div>
+
             <form id="loginForm">
+
                 <div class="form-group">
                     <input type="text" id="username" class="form-control" placeholder=" " required>
                     <label for="username" class="floating-label">Username or Email</label>
@@ -57,60 +60,49 @@
 
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const btn = e.target.querySelector('button');
-            const originalText = btn.innerHTML;
+            
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
-
-            console.log('Frontend: Starting login for', username);
+            const errorDiv = document.getElementById('loginError');
+            
+            errorDiv.style.display = 'none';
+            const btn = e.target.querySelector('button');
+            const originalText = btn.innerHTML;
+            
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Authenticating...';
+            btn.disabled = true;
             
             try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-                
-                console.log('Frontend: Sending fetch request');
                 const res = await fetch(`${API_BASE}/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password }),
-                    signal: controller.signal
+                    body: JSON.stringify({ username, password })
                 });
                 
-                console.log('Frontend: Got response, status:', res.status);
-                clearTimeout(timeoutId);
                 const result = await res.json();
-                console.log('Frontend: Parsed response:', result);
-
-                console.log('Frontend: Checking response status:', result.status);
                 if (result.status === 'success') {
-                    console.log('Frontend: Login successful, saving data');
-                    alert('Login successful! Redirecting...');
-                    
-                    // Save to local storage
                     const userId = result.data.id;
-                    const username = result.data.username;
                     const userName = result.data.name || result.data.username;
+                    const userLogin = result.data.username;
                     
-                    console.log('Frontend: Saving to localStorage:', { userId, username, userName });
                     localStorage.setItem('user_id', userId);
-                    localStorage.setItem('username', username);
+                    localStorage.setItem('username', userLogin);
                     localStorage.setItem('user_name', userName);
 
-                    console.log('Frontend: Redirecting to dashboard immediately');
                     window.location.href = 'dashboard-new.html';
                 } else {
-                    alert(result.message);
+                    errorDiv.textContent = result.message || 'Invalid login credentials';
+                    errorDiv.style.display = 'block';
                     btn.innerHTML = originalText;
+                    btn.disabled = false;
                 }
             } catch (err) {
-                if (err.name === 'AbortError') {
-                    alert('Request timeout - please try again');
-                } else {
-                    alert('Network error: ' + err.message);
-                }
+                errorDiv.textContent = 'Network error: ' + err.message;
+                errorDiv.style.display = 'block';
                 btn.innerHTML = originalText;
+                btn.disabled = false;
             }
+
         });
     </script>
 </body>

@@ -65,6 +65,7 @@
             Admin Portal
         </a>
         <div class="nav-links">
+            <a href="admin-locations.html" class="btn btn-outline" style="padding: 0.5rem 1rem;"><i class="fas fa-map-marker-alt"></i> Locations</a>
             <a href="admin-verify.html" class="btn btn-primary" style="padding: 0.5rem 1rem;"><i class="fas fa-search"></i> Verify Entry</a>
             <button id="themeToggle" class="btn btn-outline" style="padding: 0.5rem 1rem; border-radius: 50%;">
                 <i class="fas fa-moon"></i>
@@ -73,12 +74,13 @@
                 <i class="fas fa-sign-out-alt"></i>
             </a>
         </div>
+
     </nav>
 
     <div class="admin-container fade-in">
         <h2 style="margin-bottom: 2rem;">System Management</h2>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+        <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 2rem; margin-bottom: 2rem;">
             <!-- Settings Section -->
             <div class="admin-section glass">
                 <h3 style="margin-bottom: 1rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem;"><i class="fas fa-cog"></i> Global Settings</h3>
@@ -87,29 +89,32 @@
                         <input type="number" step="0.01" id="feeInput" class="form-control" required>
                         <label for="feeInput" class="floating-label" style="top: 0; font-size: 0.8rem; color: var(--primary-color);">Parking Fee Per Hour (₹)</label>
                     </div>
-                    <button class="btn btn-primary" onclick="window.saveFee(event)">Update Fee</button>
+                    <button class="btn btn-primary" onclick="window.saveFee(event)">Update</button>
                 </div>
             </div>
 
             <!-- Add Slot Section -->
             <div class="admin-section glass">
                 <h3 style="margin-bottom: 1rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem;"><i class="fas fa-plus-circle"></i> Add Parking Slot</h3>
-                <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
-                    <div class="form-group" style="margin-bottom: 0; flex: 2; min-width: 120px;">
-                        <input type="text" id="newSlotId" class="form-control" placeholder="e.g. F1" required style="text-transform: uppercase;">
-                        <label for="newSlotId" class="floating-label" style="top: 0; font-size: 0.8rem; color: var(--primary-color);">Slot ID</label>
-                    </div>
-                    <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 120px;">
-                        <select id="newSlotType" class="form-control">
-                            <option value="car">Car</option>
-                            <option value="bike">Bike</option>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 0.8fr 0.7fr; gap: 1rem; align-items: flex-end;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <select id="slotCitySelect" class="form-control" required>
+                            <option value="" disabled selected>City</option>
                         </select>
-                        <label for="newSlotType" class="floating-label" style="top: 0; font-size: 0.8rem; color: var(--primary-color);">Type</label>
                     </div>
-                    <button class="btn btn-primary" onclick="addNewSlot()">Add Slot</button>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <select id="slotPlaceSelect" class="form-control" required disabled>
+                            <option value="" disabled selected>Area</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <input type="text" id="newSlotId" class="form-control" placeholder="A1" required style="text-transform: uppercase;">
+                    </div>
+                    <button class="btn btn-primary" onclick="addNewSlot()">Add</button>
                 </div>
             </div>
         </div>
+
 
         <!-- Slot Management Table -->
         <div class="admin-section glass">
@@ -139,13 +144,15 @@
                     <thead>
                         <tr>
                             <th>Booking ID</th>
-                            <th>User</th>
+                            <th>User / Vehicle</th>
+                            <th>Location</th>
                             <th>Slot</th>
-                            <th>Date</th>
-                            <th>Time</th>
+                            <th>Date / Time</th>
                             <th>Cost</th>
                             <th>Status</th>
+                            <th>Action</th>
                         </tr>
+
                     </thead>
                     <tbody id="bookingsTableBody">
                         <!-- Populated by JS -->
@@ -153,6 +160,7 @@
                 </table>
             </div>
         </div>
+
     </div>
 
     <script src="js/main.js"></script>
@@ -167,9 +175,53 @@
             const serverFee = await fetchSettingsFromServer();
             document.getElementById('feeInput').value = serverFee;
             
-            renderAdminSlots();
+            initLocationSelectors();
             renderAdminBookings();
         });
+
+        async function initLocationSelectors() {
+            try {
+                const res = await fetch(`${window.API_BASE}/cities`);
+                const result = await res.json();
+                const citySelect = document.getElementById('slotCitySelect');
+                const placeSelect = document.getElementById('slotPlaceSelect');
+
+                if (result.status === 'success') {
+                    result.data.forEach(city => {
+                        const opt = document.createElement('option');
+                        opt.value = city.id;
+                        opt.textContent = city.name;
+                        citySelect.appendChild(opt);
+                    });
+                }
+
+                citySelect.addEventListener('change', async () => {
+                    const cityId = citySelect.value;
+                    placeSelect.innerHTML = '<option value="" disabled selected>Area</option>';
+                    placeSelect.disabled = true;
+
+                    if (cityId) {
+                        const pRes = await fetch(`${window.API_BASE}/places/${cityId}`);
+                        const pResult = await pRes.json();
+                        if (pResult.status === 'success') {
+                            pResult.data.forEach(place => {
+                                const opt = document.createElement('option');
+                                opt.value = place.id;
+                                opt.textContent = place.name;
+                                placeSelect.appendChild(opt);
+                            });
+                            placeSelect.disabled = false;
+                        }
+                    }
+                });
+
+                placeSelect.addEventListener('change', () => {
+                    renderAdminSlots(placeSelect.value);
+                });
+
+            } catch (e) { console.error(e); }
+        }
+
 
         window.saveFee = async (e) => {
             const btn = e.target;
@@ -180,28 +232,33 @@
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
                 btn.disabled = true;
                 
-                const result = await updateFeeOnServer(newFee);
+                const success = await updateFeeOnServer(newFee);
                 
                 btn.innerHTML = originalText;
                 btn.disabled = false;
                 
-                if (result.success) {
+                if (success) {
                     showToast('✅ Database Updated: Parking fee set to ₹' + newFee, 'success');
                 } else {
-                    showToast('❌ Update Failed: ' + (result.message || 'Server Error'), 'error');
+                    showToast('❌ Update Failed', 'error');
                 }
             } else {
                 showToast('Invalid fee amount', 'error');
             }
         };
 
+
         window.addNewSlot = async () => {
             const slotInput = document.getElementById('newSlotId');
-            const typeInput = document.getElementById('newSlotType');
+            const placeSelect = document.getElementById('slotPlaceSelect');
             const slotId = slotInput.value.trim().toUpperCase();
             
+            if (!placeSelect.value) {
+                showToast('Please select an area first', 'error');
+                return;
+            }
             if (!slotId) {
-                showToast('Slot ID cannot be empty', 'error');
+                showToast('Slot number cannot be empty', 'error');
                 return;
             }
 
@@ -209,14 +266,14 @@
                 const res = await fetch(`${window.API_BASE}/add-slot`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ slot_id: slotId, type: typeInput.value })
+                    body: JSON.stringify({ place_id: placeSelect.value, slot_number: slotId, type: 'car' })
                 });
                 const result = await res.json();
                 
                 if (result.status === 'success') {
                     showToast(`Slot ${slotId} added successfully`, 'success');
                     slotInput.value = '';
-                    renderAdminSlots();
+                    renderAdminSlots(placeSelect.value);
                 } else {
                     showToast(result.message, 'error');
                 }
@@ -225,9 +282,9 @@
             }
         };
 
-        window.removeSlot = async (slotId) => {
-            console.log('Admin: Attempting to delete slot', slotId);
-            if (!confirm(`Are you sure you want to delete Slot ${slotId}?`)) return;
+
+        window.removeSlot = async (slotId, placeId) => {
+            if (!confirm(`Are you sure you want to delete this slot?`)) return;
 
             try {
                 const res = await fetch(`${window.API_BASE}/delete-slot/${slotId}`, {
@@ -236,43 +293,51 @@
                 const result = await res.json();
 
                 if (result.status === 'success') {
-                    showToast(`Slot ${slotId} deleted`, 'success');
-                    renderAdminSlots();
+                    showToast(`Slot deleted`, 'success');
+                    renderAdminSlots(placeId);
                 } else {
-                    console.error("API Error (/api/settings):", result.message);
                     alert(result.message || 'Failed to delete slot');
                 }
             } catch (err) {
-                console.error("API Error (/api/settings):", err);
-                showToast('Failed to delete slot: ' + err.message, 'error');
+                showToast('Failed to delete slot', 'error');
             }
         };
 
-        const renderAdminSlots = async () => {
+
+        const renderAdminSlots = async (placeId) => {
             const tbody = document.getElementById('slotsTableBody');
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;"><i class="fas fa-spinner fa-spin"></i></td></tr>';
+            if (!placeId) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Please select an area to manage slots</td></tr>';
+                return;
+            }
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
+
             
             try {
-                const res = await fetch(`${window.API_BASE}/slots`);
+                const res = await fetch(`${window.API_BASE}/slots/${placeId}`);
                 const result = await res.json();
                 
                 if(result.status === 'success') {
                     tbody.innerHTML = '';
+                    if (result.data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No slots found in this area</td></tr>';
+                        return;
+                    }
                     result.data.forEach(slot => {
                         const tr = document.createElement('tr');
-                        const statusColor = slot.status === 'free' ? 'var(--success)' : 'var(--danger)';
+                        const statusColor = slot.status === 'available' ? 'var(--success)' : 'var(--danger)';
                         
                         tr.innerHTML = `
-                            <td style="font-weight: 600;">${slot.id}</td>
+                            <td style="font-weight: 600;">${slot.slot_number}</td>
                             <td><span class="badge" style="background: var(--glass-bg);">${slot.type.toUpperCase()}</span></td>
                             <td><span style="color: ${statusColor}; font-weight: 500;">${slot.status.toUpperCase()}</span></td>
                             <td>
-                                <button class="btn btn-outline action-btn delete-btn" data-id="${slot.id}" style="color: var(--danger); border-color: var(--danger);">Delete</button>
+                                <button class="btn btn-outline action-btn delete-btn" style="color: var(--danger); border-color: var(--danger);">Delete</button>
                             </td>
                         `;
 
                         tr.querySelector('.delete-btn').addEventListener('click', () => {
-                            window.removeSlot(slot.id);
+                            window.removeSlot(slot.id, placeId);
                         });
 
                         tbody.appendChild(tr);
@@ -283,9 +348,10 @@
             }
         };
 
+
         const renderAdminBookings = async () => {
             const tbody = document.getElementById('bookingsTableBody');
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;"><i class="fas fa-spinner fa-spin"></i></td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
             
             try {
                 const res = await fetch(`${window.API_BASE}/bookings`);
@@ -294,30 +360,82 @@
                 if(result.status === 'success') {
                     tbody.innerHTML = '';
                     if (result.data.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">No bookings found</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted);">No bookings found</td></tr>';
                         return;
                     }
 
                     result.data.forEach(booking => {
                         const tr = document.createElement('tr');
-                        const statusColor = booking.entry_status === 'entered' ? 'var(--success)' : 'var(--text-muted)';
+                        let statusColor = 'var(--text-muted)';
+                        if (booking.entry_status === 'entered') statusColor = 'var(--success)';
+                        if (booking.entry_status === 'exited') statusColor = 'var(--primary-color)';
+                        if (booking.entry_status === 'pending') statusColor = '#856404';
+
+                        const location = (booking.city_name && booking.place_name) 
+                            ? `${booking.city_name} - ${booking.place_name}`
+                            : 'N/A';
                         
                         tr.innerHTML = `
                             <td style="font-family: monospace; font-size: 0.8rem;">${booking.id}</td>
                             <td style="font-weight: 500;">${booking.user_name || 'User'} <br> <small style="color:var(--text-muted)">${booking.vehicle_number || ''}</small></td>
-                            <td style="font-weight: 600; color: var(--primary-color);">${booking.slot_id}</td>
-                            <td>${new Date(booking.date).toLocaleDateString()}</td>
-                            <td>${booking.start_time} - ${booking.end_time}</td>
-                            <td style="font-weight: 600;">₹${booking.total_cost}</td>
-                            <td><span style="color: ${statusColor}; font-size: 0.85rem;">${booking.entry_status.toUpperCase()}</span></td>
+                            <td><small>${location}</small></td>
+                            <td style="font-weight: 600; color: var(--primary-color);">${booking.slot_number}</td>
+                            <td><small>${new Date(booking.date).toLocaleDateString()}<br>${booking.start_time.substring(0,5)} - ${booking.end_time.substring(0,5)}</small></td>
+                            <td style="font-weight: 600;">₹${parseFloat(booking.total_cost).toFixed(2)}</td>
+                            <td><span style="color: ${statusColor}; font-size: 0.85rem; font-weight: bold;">${booking.entry_status.toUpperCase()}</span></td>
+                            <td>
+                                ${booking.entry_status === 'pending' ? `<button class="btn btn-primary action-btn" onclick="verifyEntry('${booking.id}')">Entry</button>` : ''}
+                                ${booking.entry_status === 'entered' ? `<button class="btn btn-outline action-btn" style="color: var(--danger); border-color: var(--danger);" onclick="markExit('${booking.id}')">Exit</button>` : ''}
+                            </td>
                         `;
+
                         tbody.appendChild(tr);
                     });
                 }
-            } catch(e) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--danger);">Failed to load bookings.</td></tr>';
+            } catch (err) {
+                console.error("Booking load error:", err);
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--danger);">Failed to load bookings from server</td></tr>';
+            }
+        };
+
+
+        window.verifyEntry = async (bookingId) => {
+            if (!confirm(`Verify entry for booking ${bookingId}?`)) return;
+            try {
+                const res = await fetch(`${window.API_BASE}/verify-entry`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ booking_id: bookingId })
+                });
+                const result = await res.json();
+                if (result.status === 'success') {
+                    showToast('Vehicle marked as Entered', 'success');
+                    renderAdminBookings();
+                }
+            } catch (err) {
+                showToast('Failed to verify entry', 'error');
+            }
+        };
+
+        window.markExit = async (bookingId) => {
+            if (!confirm(`Mark exit and free slot for booking ${bookingId}?`)) return;
+            try {
+                const res = await fetch(`${window.API_BASE}/mark-exit`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ booking_id: bookingId })
+                });
+                const result = await res.json();
+                if (result.status === 'success') {
+                    showToast('Vehicle marked as Exited and slot freed', 'success');
+                    renderAdminBookings();
+                    renderAdminSlots();
+                }
+            } catch (err) {
+                showToast('Failed to mark exit', 'error');
             }
         };
     </script>
+
 </body>
 </html>

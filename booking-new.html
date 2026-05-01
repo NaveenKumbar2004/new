@@ -12,10 +12,38 @@
     <style>
         .booking-container {
             padding: 6rem 5% 2rem;
-            max-width: 1000px;
+            max-width: 1200px;
             margin: 0 auto;
             width: 100%;
         }
+        .slot-grid-container {
+            margin-top: 2rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 1rem;
+            padding: 1.5rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+        }
+        .slot-box {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            border: 2px solid transparent;
+        }
+        .slot-box.available { background: rgba(16, 185, 129, 0.1); border-color: var(--success); color: var(--success); }
+        .slot-box.occupied { background: rgba(239, 68, 68, 0.1); border-color: var(--danger); color: var(--danger); cursor: not-allowed; }
+        .slot-box.selected { background: var(--primary-color); border-color: white; color: white; transform: scale(1.05); box-shadow: 0 0 15px var(--primary-color); }
+        .slot-box i { font-size: 1.5rem; margin-bottom: 0.5rem; }
+        .slot-box span { font-weight: 700; font-size: 0.9rem; }
+
     </style>
 </head>
 <body>
@@ -41,14 +69,35 @@
         <div class="booking-grid">
             <div class="booking-form-card glass">
                 <form id="bookingForm">
-                    <div class="form-group">
-                        <select id="slotSelect" class="form-control" required style="appearance: none;">
-                            <option value="" disabled selected>Select a slot</option>
-                            <!-- Populated by JS -->
-                        </select>
-                        <i class="fas fa-chevron-down" style="position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none;"></i>
-                        <label for="slotSelect" class="floating-label" style="top: 0; font-size: 0.8rem; color: var(--primary-color);">Selected Slot</label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="form-group">
+                            <select id="citySelect" class="form-control" required style="appearance: none;">
+                                <option value="" disabled selected>Select City</option>
+                            </select>
+                            <i class="fas fa-chevron-down" style="position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none;"></i>
+                            <label for="citySelect" class="floating-label" style="top: 0; font-size: 0.8rem; color: var(--primary-color);">City</label>
+                        </div>
+                        <div class="form-group">
+                            <select id="placeSelect" class="form-control" required style="appearance: none;" disabled>
+                                <option value="" disabled selected>Select Place</option>
+                            </select>
+                            <i class="fas fa-chevron-down" style="position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none;"></i>
+                            <label for="placeSelect" class="floating-label" style="top: 0; font-size: 0.8rem; color: var(--primary-color);">Place</label>
+                        </div>
                     </div>
+
+                    <div class="form-group" style="display: none;">
+                        <input type="hidden" id="selectedSlotId" required>
+                    </div>
+
+                    <div id="slotMapSection" style="display: none; margin-top: 1rem;">
+                        <p style="font-weight: 600; margin-bottom: 0.5rem;"><i class="fas fa-th"></i> Select a Slot:</p>
+                        <div class="slot-grid-container" id="slotGrid">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+
+
 
                     <div class="form-group">
                         <input type="date" id="bookingDate" class="form-control" required>
@@ -89,9 +138,15 @@
                     </div>
                     
                     <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                        <span style="color: var(--text-muted);">Selected Slot</span>
+                        <span id="displaySlot" style="font-weight: 600; color: var(--primary-color); font-size: 1.2rem;">-</span>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
                         <span style="color: var(--text-muted);">Estimated Duration</span>
                         <span id="estDuration" style="font-weight: 600; color: var(--text-color);">-</span>
                     </div>
+
                 </div>
 
                 <div style="margin-top: 2rem; border-top: 1px solid var(--glass-border); padding-top: 1rem;">
@@ -113,27 +168,7 @@
             initDB(); // only for fee
             
             currentUserId = localStorage.getItem('user_id');
-            if (!currentUserId) {
-                window.location.href = 'login-new.html';
-                return;
-            }
-
             try {
-                // Populate slots from API
-                const slotRes = await fetch(`${API_BASE}/slots`);
-                const slotResult = await slotRes.json();
-                
-                const select = document.getElementById('slotSelect');
-                if (slotResult.status === 'success') {
-                    const freeSlots = slotResult.data.filter(s => s.status === 'free');
-                    freeSlots.forEach(slot => {
-                        const opt = document.createElement('option');
-                        opt.value = slot.id;
-                        opt.textContent = 'Slot ' + slot.id;
-                        select.appendChild(opt);
-                    });
-                }
-
                 // Populate user vehicles from API
                 const vRes = await fetch(`${API_BASE}/vehicles/${currentUserId}`);
                 const vResult = await vRes.json();
@@ -147,19 +182,91 @@
                         vSelect.appendChild(opt);
                     });
                 }
+
+                // Populate Cities
+                const cityRes = await fetch(`${API_BASE}/cities`);
+                const cityResult = await cityRes.json();
+                const citySelect = document.getElementById('citySelect');
+                const placeSelect = document.getElementById('placeSelect');
+
+                if (cityResult.status === 'success') {
+                    cityResult.data.forEach(city => {
+                        const opt = document.createElement('option');
+                        opt.value = city.id;
+                        opt.textContent = city.name;
+                        citySelect.appendChild(opt);
+                    });
+                }
+
+                citySelect.addEventListener('change', async () => {
+                    const cityId = citySelect.value;
+                    placeSelect.innerHTML = '<option value="" disabled selected>Select Place</option>';
+                    placeSelect.disabled = true;
+                    document.getElementById('slotMapSection').style.display = 'none';
+
+                    if (cityId) {
+                        const placeRes = await fetch(`${API_BASE}/places/${cityId}`);
+                        const placeResult = await placeRes.json();
+                        if (placeResult.status === 'success') {
+                            placeResult.data.forEach(place => {
+                                const opt = document.createElement('option');
+                                opt.value = place.id;
+                                opt.textContent = place.name;
+                                placeSelect.appendChild(opt);
+                            });
+                            placeSelect.disabled = false;
+                        }
+                    }
+                });
+
+                placeSelect.addEventListener('change', async () => {
+                    const placeId = placeSelect.value;
+                    if (placeId) {
+                        loadSlotMap(placeId);
+                    }
+                });
+
             } catch(e) {
                 console.error("API Error:", e);
                 showToast("Failed to load data from server", "error");
             }
 
-            // Auto-select slot if passed in URL
+            // Sync current fee from server
+            const serverFee = await fetchSettingsFromServer();
+            document.getElementById('displayFee').textContent = `₹${parseFloat(serverFee).toFixed(2)}`;
+
+            // Auto-select based on URL
             const urlParams = new URLSearchParams(window.location.search);
+            const cityParam = urlParams.get('city');
+            const placeParam = urlParams.get('place');
             const slotParam = urlParams.get('slot');
-            if (slotParam) {
-                if (select.querySelector(`option[value="${slotParam}"]`)) {
-                    select.value = slotParam;
-                }
+
+            if (cityParam) {
+                const citySelect = document.getElementById('citySelect');
+                citySelect.value = cityParam;
+                // Trigger change to load places
+                citySelect.dispatchEvent(new Event('change'));
+                
+                // Wait a bit for places to load then select place
+                setTimeout(async () => {
+                    if (placeParam) {
+                        const placeSelect = document.getElementById('placeSelect');
+                        placeSelect.value = placeParam;
+                        placeSelect.dispatchEvent(new Event('change'));
+
+                        if (slotParam) {
+                            // Wait for map to load then select slot
+                            setTimeout(() => {
+                                const slotBox = document.querySelector(`.slot-box[onclick*="selectSlot(${slotParam}"]`);
+                                if (slotBox) slotBox.click();
+                            }, 500);
+                        }
+                    }
+                }, 500);
             }
+
+
+            // Set min date to today
 
             // Set min date to today
             const dateInput = document.getElementById('bookingDate');
@@ -206,13 +313,14 @@
             document.getElementById('bookingForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 
-                const select = document.getElementById('slotSelect');
+                const slotId = document.getElementById('selectedSlotId').value;
                 const vSelect = document.getElementById('vehicleNum');
 
-                if (!select.value || !vSelect.value) {
+                if (!slotId || !vSelect.value) {
                     showToast('Please select a slot and vehicle', 'error');
                     return;
                 }
+
 
                 const btn = e.target.querySelector('button');
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
@@ -225,13 +333,17 @@
                             'x-user-id': currentUserId
                         },
                         body: JSON.stringify({
-                            slot_id: select.value,
+                            slot_id: slotId,
                             vehicle_id: vSelect.value,
+
+                            city_id: document.getElementById('citySelect').value,
+                            place_id: document.getElementById('placeSelect').value,
                             date: dateInput.value,
                             start_time: startInput.value,
                             end_time: endInput.value,
                             total_cost: finalCost.toFixed(2)
                         })
+
                     });
 
                     const result = await res.json();
@@ -255,5 +367,52 @@
             });
         });
     </script>
+    <script>
+        // Global helper functions
+        async function loadSlotMap(placeId) {
+            const API_BASE = getAPI_BASE();
+            const grid = document.getElementById('slotGrid');
+            const section = document.getElementById('slotMapSection');
+            grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center;"><i class="fas fa-spinner fa-spin"></i> Loading Map...</div>';
+            section.style.display = 'block';
+
+            try {
+                const res = await fetch(`${API_BASE}/slots/${placeId}`);
+                const result = await res.json();
+                if (result.status === 'success') {
+                    grid.innerHTML = '';
+                    if (result.data.length === 0) {
+                        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center;">No slots available for this location.</div>';
+                        return;
+                    }
+                    result.data.forEach(slot => {
+                        const box = document.createElement('div');
+                        box.className = `slot-box ${slot.status}`;
+                        box.innerHTML = `
+                            <i class="fas ${slot.type === 'car' ? 'fa-car' : 'fa-motorcycle'}"></i>
+                            <span>${slot.slot_number}</span>
+                        `;
+                        if (slot.status === 'available') {
+                            box.onclick = () => selectSlot(slot.id, slot.slot_number, box);
+                        }
+                        grid.appendChild(box);
+                    });
+                }
+            } catch (e) { 
+                console.error(e);
+                showToast('Error loading map', 'error'); 
+            }
+        }
+
+        function selectSlot(id, number, element) {
+            // Deselect previous
+            document.querySelectorAll('.slot-box').forEach(el => el.classList.remove('selected'));
+            // Select new
+            element.classList.add('selected');
+            document.getElementById('selectedSlotId').value = id;
+            document.getElementById('displaySlot').textContent = number;
+        }
+    </script>
+
 </body>
 </html>

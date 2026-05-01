@@ -23,7 +23,10 @@
                 <p style="color: var(--text-muted); margin-top: 0.5rem;">Join the smart parking network</p>
             </div>
             
+            <div id="regMessage" style="padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem; display: none; text-align: center; font-size: 0.9rem;"></div>
+
             <form id="registerForm">
+
                 <div class="form-group">
                     <input type="text" id="fullName" class="form-control" placeholder=" " required>
                     <label for="fullName" class="floating-label">Full Name</label>
@@ -51,7 +54,8 @@
                     <i class="fas fa-eye password-toggle"></i>
                 </div>
                 
-                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Verifying Credentials...</button>
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Register Now</button>
+
             </form>
             
             <div style="text-align: center; margin-top: 2rem; font-size: 0.9rem; color: var(--text-color);">
@@ -72,9 +76,16 @@
             const vehicleNumber = document.getElementById('vehicleNumber').value.trim().toUpperCase();
             const password = document.getElementById('regPassword').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
+            const msgDiv = document.getElementById('regMessage');
+
+            msgDiv.style.display = 'none';
 
             if (password !== confirmPassword) {
-                alert('Passwords do not match!');
+                msgDiv.textContent = 'Passwords do not match!';
+                msgDiv.style.background = 'rgba(255, 71, 87, 0.1)';
+                msgDiv.style.color = 'var(--danger)';
+                msgDiv.style.border = '1px solid var(--danger)';
+                msgDiv.style.display = 'block';
                 return;
             }
             
@@ -85,9 +96,6 @@
             btn.disabled = true;
             
             try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000);
-                
                 const res = await fetch(`${API_BASE}/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -96,31 +104,41 @@
                         username: username, 
                         password: password,
                         vehicle_number: vehicleNumber
-                    }),
-                    signal: controller.signal
+                    })
                 });
                 
-                clearTimeout(timeoutId);
                 const result = await res.json();
 
                 if (result.status === 'success') {
-                    alert('Registration successful! Please login.');
-                    window.location.href = 'login-new.html';
+                    msgDiv.textContent = 'Registration successful! Redirecting to login...';
+                    msgDiv.style.background = 'rgba(46, 213, 115, 0.1)';
+                    msgDiv.style.color = 'var(--success)';
+                    msgDiv.style.border = '1px solid var(--success)';
+                    msgDiv.style.display = 'block';
+                    
+                    setTimeout(() => {
+                        window.location.href = 'login-new.html';
+                    }, 1500);
                 } else {
-                    alert(result.message || 'Registration failed');
+                    msgDiv.textContent = result.message || 'Registration failed';
+                    msgDiv.style.background = 'rgba(255, 71, 87, 0.1)';
+                    msgDiv.style.color = 'var(--danger)';
+                    msgDiv.style.border = '1px solid var(--danger)';
+                    msgDiv.style.display = 'block';
                     btn.innerHTML = originalText;
                     btn.disabled = false;
                 }
             } catch (err) {
-                if (err.name === 'AbortError') {
-                    alert('Request timeout - please try again');
-                } else {
-                    alert('Network error: ' + err.message);
-                }
+                msgDiv.textContent = 'Connection error. Please check your server.';
+                msgDiv.style.background = 'rgba(255, 71, 87, 0.1)';
+                msgDiv.style.color = 'var(--danger)';
+                msgDiv.style.border = '1px solid var(--danger)';
+                msgDiv.style.display = 'block';
                 btn.innerHTML = originalText;
                 btn.disabled = false;
             }
         });
+
     </script>
 </body>
 </html>

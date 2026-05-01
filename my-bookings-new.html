@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Bookings - Smart Parking</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .bookings-container {
+            padding: 6rem 5% 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .booking-card {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 2rem;
+            align-items: center;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            transition: transform 0.3s ease;
+        }
+        .booking-card:hover {
+            transform: translateY(-5px);
+        }
+        .status-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-entered { background: #d4edda; color: #155724; }
+        .status-exited { background: #cce5ff; color: #004085; }
+        
+        .booking-info h3 { margin-bottom: 0.5rem; color: var(--primary-color); }
+        .booking-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-top: 1rem; }
+        .detail-item { font-size: 0.9rem; color: var(--text-muted); }
+        .detail-item strong { color: var(--text-color); display: block; margin-top: 0.2rem; }
+        
+        @media (max-width: 768px) {
+            .booking-card { grid-template-columns: 1fr; gap: 1rem; text-align: center; }
+            .booking-details { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body class="dashboard-bg">
+    <nav class="navbar glass">
+        <a href="dashboard-new.html" class="nav-brand">
+            <i class="fas fa-parking" style="color: var(--primary-color);"></i>
+            SmartPark
+        </a>
+        <div class="nav-links">
+            <a href="dashboard-new.html" class="btn btn-outline" style="padding: 0.5rem 1rem;">Back to Map</a>
+            <button id="themeToggle" class="btn btn-outline" style="padding: 0.5rem 1rem; border-radius: 50%;">
+                <i class="fas fa-moon"></i>
+            </button>
+        </div>
+    </nav>
+
+    <div class="bookings-container fade-in">
+        <div style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h2>My Bookings</h2>
+                <p style="color: var(--text-muted); margin-top: 0.5rem;">View and manage your parking history.</p>
+            </div>
+            <a href="booking-new.html" class="btn btn-primary"><i class="fas fa-plus"></i> New Booking</a>
+        </div>
+
+        <div id="bookingsList">
+            <!-- Populated by JS -->
+            <div style="text-align: center; padding: 4rem;">
+                <i class="fas fa-spinner fa-spin fa-3x" style="color: var(--primary-color);"></i>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script>
+        const API_BASE = getAPI_BASE();
+        const userId = localStorage.getItem('user_id');
+
+        if (!userId) {
+            window.location.href = 'login-new.html';
+        }
+
+        async function fetchMyBookings() {
+            try {
+                const res = await fetch(`${API_BASE}/my-bookings/${userId}`);
+                const result = await res.json();
+                
+                const list = document.getElementById('bookingsList');
+                if (result.status === 'success') {
+                    if (result.data.length === 0) {
+                        list.innerHTML = `
+                            <div class="glass" style="padding: 4rem; text-align: center;">
+                                <i class="fas fa-calendar-times fa-4x" style="color: var(--text-muted); margin-bottom: 1rem;"></i>
+                                <h3>No Bookings Found</h3>
+                                <p style="color: var(--text-muted);">You haven't made any bookings yet.</p>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    list.innerHTML = '';
+                    result.data.forEach(booking => {
+                        const statusClass = `status-${booking.entry_status}`;
+                        const card = document.createElement('div');
+                        card.className = 'booking-card glass fade-in';
+                        
+                        card.innerHTML = `
+                            <div class="booking-icon" style="font-size: 2rem; color: var(--primary-color);">
+                                <i class="fas fa-ticket-alt"></i>
+                            </div>
+                            <div class="booking-info">
+                                <h3>Booking #${booking.id}</h3>
+                                <p style="font-weight: 600; color: var(--text-color);">
+                                    <i class="fas fa-map-marker-alt" style="color: var(--danger);"></i> 
+                                    ${booking.city_name} - ${booking.place_name}
+                                </p>
+                                <div class="booking-details">
+                                    <div class="detail-item">Vehicle <strong>${booking.vehicle_number}</strong></div>
+                                    <div class="detail-item">Slot <strong>${booking.slot_id}</strong></div>
+                                    <div class="detail-item">Date <strong>${new Date(booking.date).toLocaleDateString()}</strong></div>
+                                    <div class="detail-item">Time <strong>${booking.start_time.substring(0,5)} - ${booking.end_time.substring(0,5)}</strong></div>
+                                </div>
+                            </div>
+                            <div style="text-align: right;">
+                                <span class="status-badge ${statusClass}">${booking.entry_status}</span>
+                                <div style="margin-top: 1rem; font-weight: 700; color: var(--primary-color); font-size: 1.2rem;">
+                                    ₹${parseFloat(booking.total_cost).toFixed(2)}
+                                </div>
+                            </div>
+                        `;
+                        list.appendChild(card);
+                    });
+                } else {
+                    list.innerHTML = `<div class="glass" style="padding: 2rem; color: var(--danger); text-align: center;">Error: ${result.message}</div>`;
+                }
+            } catch (err) {
+                console.error(err);
+                document.getElementById('bookingsList').innerHTML = `<div class="glass" style="padding: 2rem; color: var(--danger); text-align: center;">Failed to connect to server</div>`;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', fetchMyBookings);
+    </script>
+</body>
+</html>

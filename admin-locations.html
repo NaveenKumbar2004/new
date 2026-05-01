@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Locations - Admin Portal</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .admin-container { padding: 6rem 5% 2rem; max-width: 1200px; margin: 0 auto; }
+        .location-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+        .location-card { padding: 2rem; }
+        .list-group { margin-top: 1.5rem; }
+        .list-item { 
+            display: flex; justify-content: space-between; align-items: center; 
+            padding: 1rem; border-bottom: 1px solid var(--glass-border); 
+        }
+        .list-item:last-child { border-bottom: none; }
+    </style>
+</head>
+<body class="dashboard-bg">
+    <nav class="navbar glass">
+        <a href="admin-dashboard.html" class="nav-brand">
+            <i class="fas fa-shield-alt" style="color: var(--primary-color);"></i>
+            Admin Portal
+        </a>
+        <div class="nav-links">
+            <a href="admin-dashboard.html" class="btn btn-outline">Dashboard</a>
+            <button id="themeToggle" class="btn btn-outline" style="border-radius: 50%;"><i class="fas fa-moon"></i></button>
+        </div>
+    </nav>
+
+    <div class="admin-container fade-in">
+        <h2 style="margin-bottom: 2rem;">Manage Locations</h2>
+
+        <div class="location-grid">
+            <!-- Manage Cities -->
+            <div class="location-card glass">
+                <h3><i class="fas fa-city"></i> Manage Cities</h3>
+                <form id="addCityForm" style="margin-top: 1.5rem;">
+                    <div class="form-group">
+                        <input type="text" id="cityName" class="form-control" placeholder="Enter city name" required>
+                        <label class="floating-label">City Name</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Add City</button>
+                </form>
+
+                <div class="list-group" id="citiesList">
+                    <!-- Cities will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Manage Areas -->
+            <div class="location-card glass">
+                <h3><i class="fas fa-map-marked-alt"></i> Manage Areas (Places)</h3>
+                <form id="addPlaceForm" style="margin-top: 1.5rem;">
+                    <div class="form-group">
+                        <select id="citySelect" class="form-control" required>
+                            <option value="" disabled selected>Select City</option>
+                        </select>
+                        <label class="floating-label" style="top: 0; font-size: 0.8rem;">City</label>
+                    </div>
+                    <div class="form-group">
+                        <input type="text" id="placeName" class="form-control" placeholder="Enter area name" required>
+                        <label class="floating-label">Area Name</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Add Area</button>
+                </form>
+
+                <div class="list-group" id="placesList">
+                    <!-- Places will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script>
+        const API_BASE = getAPI_BASE();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadCities();
+        });
+
+        async function loadCities() {
+            try {
+                const res = await fetch(`${API_BASE}/cities`);
+                const result = await res.json();
+                const list = document.getElementById('citiesList');
+                const select = document.getElementById('citySelect');
+                
+                if (result.status === 'success') {
+                    list.innerHTML = '<h4>Active Cities</h4>';
+                    select.innerHTML = '<option value="" disabled selected>Select City</option>';
+                    
+                    result.data.forEach(city => {
+                        // Add to list
+                        const item = document.createElement('div');
+                        item.className = 'list-item';
+                        item.innerHTML = `<span>${city.name}</span> <i class="fas fa-chevron-right" style="color: var(--primary-color);"></i>`;
+                        item.style.cursor = 'pointer';
+                        item.onclick = () => loadPlaces(city.id, city.name);
+                        list.appendChild(item);
+
+                        // Add to select
+                        const opt = document.createElement('option');
+                        opt.value = city.id;
+                        opt.textContent = city.name;
+                        select.appendChild(opt);
+                    });
+                }
+            } catch (e) { showToast('Error loading cities', 'error'); }
+        }
+
+        async function loadPlaces(cityId, cityName) {
+            try {
+                const res = await fetch(`${API_BASE}/places/${cityId}`);
+                const result = await res.json();
+                const list = document.getElementById('placesList');
+                
+                list.innerHTML = `<h4>Areas in ${cityName}</h4>`;
+                if (result.status === 'success') {
+                    if (result.data.length === 0) {
+                        list.innerHTML += '<p style="color: var(--text-muted); margin-top: 1rem;">No areas added yet.</p>';
+                        return;
+                    }
+                    result.data.forEach(place => {
+                        const item = document.createElement('div');
+                        item.className = 'list-item';
+                        item.innerHTML = `<span>${place.name}</span> <span class="badge" style="background: var(--glass-bg);">ID: ${place.id}</span>`;
+                        list.appendChild(item);
+                    });
+                }
+            } catch (e) { showToast('Error loading areas', 'error'); }
+        }
+
+        document.getElementById('addCityForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('cityName').value;
+            try {
+                const res = await fetch(`${API_BASE}/add-city`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+                const result = await res.json();
+                if (result.status === 'success') {
+                    showToast('City added successfully');
+                    document.getElementById('cityName').value = '';
+                    loadCities();
+                } else { showToast(result.message, 'error'); }
+            } catch (e) { showToast('Network error', 'error'); }
+        });
+
+        document.getElementById('addPlaceForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const cityId = document.getElementById('citySelect').value;
+            const name = document.getElementById('placeName').value;
+            try {
+                const res = await fetch(`${API_BASE}/add-place`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ city_id: cityId, name })
+                });
+                const result = await res.json();
+                if (result.status === 'success') {
+                    showToast('Area added successfully');
+                    document.getElementById('placeName').value = '';
+                    loadPlaces(cityId, document.getElementById('citySelect').selectedOptions[0].text);
+                } else { showToast(result.message, 'error'); }
+            } catch (e) { showToast('Network error', 'error'); }
+        });
+    </script>
+</body>
+</html>
