@@ -26,6 +26,22 @@ const pool = mysql.createPool({
     queueLimit: 0
 });
 
+// Test connection on startup
+pool.getConnection()
+    .then(conn => {
+        console.log("✅ Successfully connected to the database!");
+        conn.release();
+    })
+    .catch(err => {
+        console.error("❌ DATABASE CONNECTION ERROR:", err.message);
+        console.error("Details:", {
+            host: process.env.DB_HOST,
+            user: process.env.DB_USER,
+            database: process.env.DB_NAME,
+            port: process.env.DB_PORT
+        });
+    });
+
 // ==========================================
 // AUTHENTICATION APIs
 // ==========================================
@@ -134,7 +150,8 @@ app.delete('/api/delete-vehicle/:id', async (req, res) => {
         await pool.query('DELETE FROM Vehicles WHERE id = ? AND user_id = ?', [req.params.id, userId]);
         res.json({ status: 'success', message: 'Vehicle deleted' });
     } catch (err) {
-        res.status(500).json({ status: 'error', message: 'DB Error' });
+        console.error("API Error (/api/slots):", err);
+        res.status(500).json({ status: 'error', message: 'DB Error: ' + err.message });
     }
 });
 
@@ -147,7 +164,8 @@ app.get('/api/slots', async (req, res) => {
         const [rows] = await pool.query('SELECT * FROM ParkingSlots');
         res.json({ status: 'success', data: rows });
     } catch (err) {
-        res.status(500).json({ status: 'error', message: 'DB Error' });
+        console.error("API Error (/api/slots):", err);
+        res.status(500).json({ status: 'error', message: 'DB Error: ' + err.message });
     }
 });
 
@@ -240,7 +258,8 @@ app.get('/api/bookings', async (req, res) => {
         `);
         res.json({ status: 'success', data: rows });
     } catch (err) {
-        res.status(500).json({ status: 'error', message: 'DB Error' });
+        console.error("API Error (/api/slots):", err);
+        res.status(500).json({ status: 'error', message: 'DB Error: ' + err.message });
     }
 });
 
@@ -308,7 +327,8 @@ app.get('/api/settings', async (req, res) => {
         });
         res.json({ status: 'success', data: settings });
     } catch (err) {
-        res.status(500).json({ status: 'error', message: 'DB Error' });
+        console.error("API Error (/api/slots):", err);
+        res.status(500).json({ status: 'error', message: 'DB Error: ' + err.message });
     }
 });
 
@@ -321,7 +341,8 @@ app.post('/api/settings', async (req, res) => {
         }
         res.json({ status: 'success', message: 'Settings updated' });
     } catch (err) {
-        res.status(500).json({ status: 'error', message: 'DB Error' });
+        console.error("API Error (/api/slots):", err);
+        res.status(500).json({ status: 'error', message: 'DB Error: ' + err.message });
     }
 });
 
