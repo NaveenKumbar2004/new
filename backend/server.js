@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const mysql = require('mysql2/promise');
-const bcrypt = require('bcryptjs');
+// const bcrypt = require('bcryptjs'); (Removed for simplicity)
 
 
 const app = express();
@@ -58,21 +58,17 @@ app.post('/api/register', async (req, res) => {
         }
 
         const vNum = vehicle_number.trim().toUpperCase();
-        
-        // Hash password before storing
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
 
         const connection = await pool.getConnection();
         try {
             await connection.beginTransaction();
 
-            // Insert User
+            // Insert User (Storing plain text password as requested)
             const [userResult] = await connection.query(
                 'INSERT INTO Users (name, username, password_hash) VALUES (?, ?, ?)',
-                [name, username, hashedPassword]
+                [name, username, password]
             );
-            
+
             const userId = userResult.insertId;
             console.log(`[AUTH] User created with ID: ${userId}`);
 
@@ -111,7 +107,17 @@ app.post('/api/login', async (req, res) => {
             return res.status(400).json({ status: 'fail', message: 'Username and password are required' });
         }
 
-        // 1. Fetch user by username
+        // 1. HARDCODED ADMIN CHECK (Specific credentials for admin portal)
+        if (username === 'admin' && password === 'admin123') {
+            console.log(`[AUTH] Admin login recognized`);
+            return res.json({ 
+                status: 'success', 
+                message: 'Admin login successful',
+                data: { id: 999, name: 'System Administrator', username: 'admin' }
+            });
+        }
+
+        // 2. DATABASE USER CHECK (Same as earlier)
         const [rows] = await pool.query('SELECT * FROM Users WHERE username = ?', [username]);
         
         if (rows.length === 0) {
@@ -122,8 +128,8 @@ app.post('/api/login', async (req, res) => {
         const user = rows[0];
         console.log(`[AUTH] User found: ${user.name} (ID: ${user.id})`);
 
-        // 2. Compare hashed password
-        const isMatch = await bcrypt.compare(password, user.password_hash);
+        // Compare plain text password
+        const isMatch = (password === user.password_hash);
         
         if (!isMatch) {
             console.warn(`[AUTH] Login failed: Invalid password for ${username}`);
@@ -161,13 +167,13 @@ app.post('/api/add-vehicle', async (req, res) => {
     try {
         const { vehicle_number, vehicle_type } = req.body;
         const vNum = vehicle_number.trim().toUpperCase();
-        
+
         const userId = req.headers['x-user-id'];
         if (!userId) return res.status(401).json({ status: 'fail', message: 'Unauthorized' });
 
-        await pool.query('INSERT INTO Vehicles (user_id, vehicle_number, vehicle_type) VALUES (?, ?, ?)', 
+        await pool.query('INSERT INTO Vehicles (user_id, vehicle_number, vehicle_type) VALUES (?, ?, ?)',
             [userId, vNum, vehicle_type]);
-            
+
         res.json({ status: 'success', message: 'Vehicle added successfully' });
     } catch (err) {
         if (err.code === 'ER_DUP_ENTRY') {
@@ -209,7 +215,7 @@ app.post('/api/add-slot', async (req, res) => {
         const { place_id, slot_number, type = 'car' } = req.body;
         const cleanNum = slot_number.trim().toUpperCase();
 
-        await pool.query('INSERT INTO ParkingSlots (place_id, slot_number, status, type) VALUES (?, ?, ?, ?)', 
+        await pool.query('INSERT INTO ParkingSlots (place_id, slot_number, status, type) VALUES (?, ?, ?, ?)',
             [place_id, cleanNum, 'available', type]);
         res.json({ status: 'success', message: 'Slot added successfully' });
     } catch (err) {
@@ -225,7 +231,7 @@ app.post('/api/add-slot', async (req, res) => {
 app.delete('/api/delete-slot/:id', async (req, res) => {
     try {
         const slotId = req.params.id;
-        
+
         // Ensure it's not occupied
         const [slots] = await pool.query('SELECT status FROM ParkingSlots WHERE id = ?', [slotId]);
         if (slots.length === 0) return res.status(404).json({ status: 'fail', message: 'Slot not found' });
@@ -450,7 +456,7 @@ app.post('/api/mark-exit', async (req, res) => {
 
         // Update status
         await connection.query('UPDATE Bookings SET entry_status = \'exited\' WHERE id = ?', [booking_id]);
-        
+
         // Free the slot
         await connection.query('UPDATE ParkingSlots SET status = \'available\' WHERE id = ?', [slot_id]);
 
@@ -493,7 +499,7 @@ app.post('/api/settings', async (req, res) => {
                 'UPDATE SystemSettings SET setting_value = ? WHERE setting_key = ?',
                 [parking_fee.toString(), 'parking_fee']
             );
-            
+
             // If no rows updated, it doesn't exist, so insert
             if (result.affectedRows === 0) {
                 await pool.query(

@@ -5,7 +5,7 @@ const fs = require('fs');
 async function setupDB() {
     try {
         console.log("Connecting to Database...");
-        
+
         const config = {
             host: process.env.DB_HOST || 'localhost',
             user: process.env.DB_USER || 'root',
@@ -16,10 +16,10 @@ async function setupDB() {
         };
 
         const connection = await mysql.createConnection(config);
-        
+
         const dbName = process.env.DB_NAME || 'smart_parking';
         console.log(`Using database: ${dbName}...`);
-        
+
         // Use the database name from .env
         await connection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\`;`);
         await connection.query(`USE \`${dbName}\`;`);
