@@ -101,23 +101,13 @@ app.post('/api/register', async (req, res) => {
 app.post('/api/login', async (req, res) => {
     try {
         const { username, password } = req.body;
-        console.log(`[AUTH] Login attempt for: ${username}`);
+        console.log(`[AUTH] User login attempt: ${username}`);
         
         if (!username || !password) {
             return res.status(400).json({ status: 'fail', message: 'Username and password are required' });
         }
 
-        // 1. HARDCODED ADMIN CHECK (Specific credentials for admin portal)
-        if (username === 'admin' && password === 'admin123') {
-            console.log(`[AUTH] Admin login recognized`);
-            return res.json({ 
-                status: 'success', 
-                message: 'Admin login successful',
-                data: { id: 999, name: 'System Administrator', username: 'admin' }
-            });
-        }
-
-        // 2. DATABASE USER CHECK (Same as earlier)
+        // DATABASE USER CHECK ONLY (Regular users)
         const [rows] = await pool.query('SELECT * FROM Users WHERE username = ?', [username]);
         
         if (rows.length === 0) {
@@ -136,7 +126,7 @@ app.post('/api/login', async (req, res) => {
             return res.status(401).json({ status: 'fail', message: 'Invalid password' });
         }
 
-        console.log(`[AUTH] Login successful for ${username}`);
+        console.log(`[AUTH] User login successful for ${username}`);
         res.json({ 
             status: 'success', 
             message: 'Login successful',
@@ -144,6 +134,41 @@ app.post('/api/login', async (req, res) => {
         });
     } catch (err) {
         console.error("[AUTH ERROR] Login:", err);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
+
+
+app.post('/api/admin/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        console.log(`[AUTH] Admin login attempt: ${username}`);
+
+        if (!username || !password) {
+            return res.status(400).json({ status: 'fail', message: 'Credentials required' });
+        }
+
+        // HARDCODED ADMIN CREDENTIALS ONLY
+        const admins = [
+            { id: 999, name: 'System Administrator', username: 'admin', password: 'admin123' },
+            { id: 998, name: 'Naveen Admin', username: 'naveen_admin', password: 'admin@2024' }
+        ];
+
+        const admin = admins.find(a => a.username === username && a.password === password);
+
+        if (!admin) {
+            console.warn(`[AUTH] Admin access denied for: ${username}`);
+            return res.status(401).json({ status: 'fail', message: 'Invalid Admin Credentials' });
+        }
+
+        console.log(`[AUTH] Admin access granted: ${username}`);
+        res.json({ 
+            status: 'success', 
+            message: 'Admin Access Granted',
+            data: { id: admin.id, name: admin.name, username: admin.username, role: 'admin' }
+        });
+    } catch (err) {
+        console.error("[AUTH ERROR] Admin Login:", err);
         res.status(500).json({ status: 'error', message: 'Internal Server Error' });
     }
 });

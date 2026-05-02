@@ -69,7 +69,7 @@
                 
                 console.log('Admin login: Sending request');
                 const API_BASE = getAPI_BASE();
-                const res = await fetch(`${API_BASE}/login`, {
+                const res = await fetch(`${API_BASE}/admin/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username: adminId, password: adminPassword }),
