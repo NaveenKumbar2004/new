@@ -1,4 +1,4 @@
--- Drop existing tables to recreate schema cleanly (for setup)
+-- Drop existing tables to recreate schema cleanly
 DROP TABLE IF EXISTS Bookings;
 DROP TABLE IF EXISTS ParkingSlots;
 DROP TABLE IF EXISTS Places;
@@ -32,7 +32,7 @@ CREATE TABLE Cities (
     name VARCHAR(100) NOT NULL UNIQUE
 );
 
--- Places Table (Areas)
+-- Places Table
 CREATE TABLE Places (
     id INT AUTO_INCREMENT PRIMARY KEY,
     city_id INT NOT NULL,
@@ -40,13 +40,15 @@ CREATE TABLE Places (
     FOREIGN KEY (city_id) REFERENCES Cities(id) ON DELETE CASCADE
 );
 
--- ParkingSlots Table (Dynamic per Place)
+-- ParkingSlots Table
 CREATE TABLE ParkingSlots (
     id INT AUTO_INCREMENT PRIMARY KEY,
     place_id INT NOT NULL,
     slot_number VARCHAR(10) NOT NULL,
+    slot_type ENUM('normal', 'ev') DEFAULT 'normal',
+    price_per_hour DECIMAL(10, 2) DEFAULT 20.00,
     status ENUM('available', 'occupied') DEFAULT 'available',
-    type ENUM('car', 'bike') DEFAULT 'car',
+    vehicle_type ENUM('car', 'bike') DEFAULT 'car',
     UNIQUE KEY (place_id, slot_number),
     FOREIGN KEY (place_id) REFERENCES Places(id) ON DELETE CASCADE
 );
@@ -58,11 +60,13 @@ CREATE TABLE Bookings (
     city_id INT NOT NULL,
     place_id INT NOT NULL,
     vehicle_id INT NOT NULL,
-    slot_id INT NOT NULL, -- References ParkingSlots.id now
-    date DATE NOT NULL,
+    slot_id INT NOT NULL,
+    booking_date DATE NOT NULL,
     start_time TIME NOT NULL,
     end_time TIME NOT NULL,
-    total_cost DECIMAL(10, 2) NOT NULL,
+    entry_time DATETIME NULL,
+    exit_time DATETIME NULL,
+    total_cost DECIMAL(10, 2) DEFAULT 0.00,
     entry_status ENUM('pending', 'entered', 'exited') DEFAULT 'pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES Users(id),
@@ -78,16 +82,21 @@ CREATE TABLE SystemSettings (
     setting_value VARCHAR(255) NOT NULL
 );
 
--- 4. Insert Initial Data (Locations only, no dummy users)
+-- Initial Data
 INSERT INTO Cities (name) VALUES ('Bangalore'), ('Mumbai');
 INSERT INTO Places (city_id, name) VALUES (1, 'MG Road'), (1, 'Indiranagar'), (2, 'Colaba');
 
 -- Initial Slots for MG Road
-INSERT INTO ParkingSlots (place_id, slot_number, type) VALUES 
-(1, 'A1', 'car'), (1, 'A2', 'car'), (1, 'A3', 'car'), (1, 'B1', 'car');
+INSERT INTO ParkingSlots (place_id, slot_number, slot_type, price_per_hour) VALUES 
+(1, 'A1', 'normal', 20.00), 
+(1, 'A2', 'normal', 20.00), 
+(1, 'A3', 'ev', 50.00), 
+(1, 'B1', 'ev', 50.00);
 
 -- Initial Slots for Indiranagar
-INSERT INTO ParkingSlots (place_id, slot_number, type) VALUES 
-(2, 'C1', 'car'), (2, 'C2', 'car'), (2, 'M1', 'bike');
+INSERT INTO ParkingSlots (place_id, slot_number, slot_type, price_per_hour) VALUES 
+(2, 'C1', 'normal', 25.00), 
+(2, 'C2', 'ev', 60.00), 
+(2, 'M1', 'normal', 15.00);
 
-INSERT INTO SystemSettings (setting_key, setting_value) VALUES ('parking_fee', '10.00');
+INSERT INTO SystemSettings (setting_key, setting_value) VALUES ('parking_fee', '20.00');

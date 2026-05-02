@@ -270,11 +270,11 @@ app.get('/api/slots/:placeId', async (req, res) => {
 
 app.post('/api/add-slot', async (req, res) => {
     try {
-        const { place_id, slot_number, type = 'car' } = req.body;
+        const { place_id, slot_number, slot_type = 'normal', price_per_hour = 20.00, vehicle_type = 'car' } = req.body;
         const cleanNum = slot_number.trim().toUpperCase();
 
-        await pool.query('INSERT INTO ParkingSlots (place_id, slot_number, status, type) VALUES (?, ?, ?, ?)',
-            [place_id, cleanNum, 'available', type]);
+        await pool.query('INSERT INTO ParkingSlots (place_id, slot_number, status, slot_type, price_per_hour, vehicle_type) VALUES (?, ?, ?, ?, ?, ?)',
+            [place_id, cleanNum, 'available', slot_type, price_per_hour, vehicle_type]);
         res.json({ status: 'success', message: 'Slot added successfully' });
     } catch (err) {
         if (err.code === 'ER_DUP_ENTRY') {
@@ -398,7 +398,7 @@ app.post('/api/book-slot', async (req, res) => {
 app.get('/api/bookings', async (req, res) => {
     try {
         const [rows] = await pool.query(`
-            SELECT b.*, v.vehicle_number, u.name as user_name, c.name as city_name, p.name as place_name, s.slot_number
+            SELECT b.*, v.vehicle_number, u.name as user_name, c.name as city_name, p.name as place_name, s.slot_number, s.slot_type, s.price_per_hour
             FROM Bookings b
             JOIN Vehicles v ON b.vehicle_id = v.id
             JOIN Users u ON b.user_id = u.id
@@ -419,7 +419,7 @@ app.get('/api/bookings', async (req, res) => {
 app.get('/api/my-bookings/:userId', async (req, res) => {
     try {
         const [rows] = await pool.query(`
-            SELECT b.*, v.vehicle_number, c.name as city_name, p.name as place_name, s.slot_number
+            SELECT b.*, v.vehicle_number, c.name as city_name, p.name as place_name, s.slot_number, s.slot_type, s.price_per_hour
             FROM Bookings b
             JOIN Vehicles v ON b.vehicle_id = v.id
             JOIN Cities c ON b.city_id = c.id
@@ -468,7 +468,7 @@ app.post('/api/verify-vehicle', async (req, res) => {
 
         if (booking.vehicle_number === arrivingVehicle) {
             // Access Granted
-            await pool.query('UPDATE Bookings SET entry_status = \'entered\' WHERE id = ?', [booking.booking_id]);
+            await pool.query('UPDATE Bookings SET entry_status = \'entered\', entry_time = NOW() WHERE id = ?', [booking.booking_id]);
             return res.json({
                 status: 'success',
                 message: 'Access Granted',
@@ -491,7 +491,7 @@ app.post('/api/verify-vehicle', async (req, res) => {
 app.post('/api/verify-entry', async (req, res) => {
     try {
         const { booking_id } = req.body;
-        await pool.query('UPDATE Bookings SET entry_status = \'entered\' WHERE id = ?', [booking_id]);
+        await pool.query('UPDATE Bookings SET entry_status = \'entered\', entry_time = NOW() WHERE id = ?', [booking_id]);
         res.json({ status: 'success', message: 'Vehicle marked as Entered' });
     } catch (err) {
         res.status(500).json({ status: 'error', message: 'DB Error' });
@@ -504,23 +504,48 @@ app.post('/api/mark-exit', async (req, res) => {
         await connection.beginTransaction();
         const { booking_id } = req.body;
 
-        // Get slot_id first
-        const [bookings] = await connection.query('SELECT slot_id FROM Bookings WHERE id = ?', [booking_id]);
+        // Get details for billing
+        const [bookings] = await connection.query(`
+            SELECT b.slot_id, b.entry_time, s.price_per_hour 
+            FROM Bookings b 
+            JOIN ParkingSlots s ON b.slot_id = s.id 
+            WHERE b.id = ?
+        `, [booking_id]);
+
         if (bookings.length === 0) {
             await connection.rollback();
             return res.status(404).json({ status: 'fail', message: 'Booking not found' });
         }
-        const slot_id = bookings[0].slot_id;
 
-        // Update status
-        await connection.query('UPDATE Bookings SET entry_status = \'exited\' WHERE id = ?', [booking_id]);
+        const { slot_id, entry_time, price_per_hour } = bookings[0];
+        const exit_time = new Date();
+        
+        // Calculate Cost
+        let total_cost = 0;
+        let duration_hours = 0;
+
+        if (entry_time) {
+            const diffMs = exit_time - new Date(entry_time);
+            duration_hours = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60))); // Min 1 hour, round up
+            total_cost = duration_hours * price_per_hour;
+        }
+
+        // Update booking with exit info and cost
+        await connection.query(`
+            UPDATE Bookings 
+            SET entry_status = 'exited', exit_time = NOW(), total_cost = ? 
+            WHERE id = ?
+        `, [total_cost, booking_id]);
 
         // Free the slot
         await connection.query('UPDATE ParkingSlots SET status = \'available\' WHERE id = ?', [slot_id]);
 
-
         await connection.commit();
-        res.json({ status: 'success', message: 'Vehicle marked as Exited and slot freed' });
+        res.json({ 
+            status: 'success', 
+            message: 'Vehicle marked as Exited and bill generated',
+            data: { total_cost, duration_hours, exit_time }
+        });
     } catch (err) {
         await connection.rollback();
         res.status(500).json({ status: 'error', message: 'DB Error' });

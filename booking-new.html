@@ -285,9 +285,10 @@
             const totalSpan = document.getElementById('estTotal');
             
             let finalCost = 0;
+            let currentRate = 0;
 
             const calculateCost = () => {
-                if (startInput.value && endInput.value) {
+                if (startInput.value && endInput.value && currentRate > 0) {
                     const start = new Date(`2000-01-01T${startInput.value}`);
                     const end = new Date(`2000-01-01T${endInput.value}`);
                     
@@ -295,8 +296,9 @@
                     if (diffHrs < 0) diffHrs += 24; // Handle passing midnight
                     
                     if (diffHrs > 0) {
-                        finalCost = diffHrs * currentFee;
-                        durationSpan.textContent = `${diffHrs.toFixed(1)} hrs`;
+                        const billableHours = Math.ceil(diffHrs); // Round up to nearest hour
+                        finalCost = billableHours * currentRate;
+                        durationSpan.textContent = `${diffHrs.toFixed(1)} hrs (Billable: ${billableHours}h)`;
                         totalSpan.textContent = `₹${finalCost.toFixed(2)}`;
                         return;
                     }
@@ -304,6 +306,12 @@
                 durationSpan.textContent = '-';
                 totalSpan.textContent = '₹0.00';
                 finalCost = 0;
+            };
+
+            window.updateRate = (rate) => {
+                currentRate = parseFloat(rate);
+                document.getElementById('displayFee').textContent = `₹${currentRate.toFixed(2)}/hr`;
+                calculateCost();
             };
 
             startInput.addEventListener('change', calculateCost);
@@ -388,12 +396,15 @@
                     result.data.forEach(slot => {
                         const box = document.createElement('div');
                         box.className = `slot-box ${slot.status}`;
+                        const isEV = slot.slot_type === 'ev';
                         box.innerHTML = `
-                            <i class="fas ${slot.type === 'car' ? 'fa-car' : 'fa-motorcycle'}"></i>
+                            <i class="fas ${isEV ? 'fa-charging-station' : (slot.vehicle_type === 'car' ? 'fa-car' : 'fa-motorcycle')}"></i>
                             <span>${slot.slot_number}</span>
+                            ${isEV ? '<small style="font-size:0.6rem; color:#2ecc71; font-weight:bold;">EV ⚡</small>' : ''}
+                            <div style="font-size:0.6rem; margin-top:2px;">₹${parseFloat(slot.price_per_hour).toFixed(0)}/hr</div>
                         `;
                         if (slot.status === 'available') {
-                            box.onclick = () => selectSlot(slot.id, slot.slot_number, box);
+                            box.onclick = () => selectSlot(slot.id, slot.slot_number, slot.price_per_hour, box);
                         }
                         grid.appendChild(box);
                     });
@@ -404,13 +415,14 @@
             }
         }
 
-        function selectSlot(id, number, element) {
+        function selectSlot(id, number, rate, element) {
             // Deselect previous
             document.querySelectorAll('.slot-box').forEach(el => el.classList.remove('selected'));
             // Select new
             element.classList.add('selected');
             document.getElementById('selectedSlotId').value = id;
             document.getElementById('displaySlot').textContent = number;
+            window.updateRate(rate);
         }
     </script>
 

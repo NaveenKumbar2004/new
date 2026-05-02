@@ -110,26 +110,60 @@
                         const card = document.createElement('div');
                         card.className = 'booking-card glass fade-in';
                         
+                        const isExited = booking.entry_status === 'exited';
+                        const isEV = booking.slot_type === 'ev';
+                        
+                        let durationText = 'N/A';
+                        if (booking.entry_time && booking.exit_time) {
+                            const diff = new Date(booking.exit_time) - new Date(booking.entry_time);
+                            const hours = Math.ceil(diff / (1000 * 60 * 60));
+                            durationText = `${hours} hr${hours > 1 ? 's' : ''}`;
+                        }
+
                         card.innerHTML = `
-                            <div class="booking-icon" style="font-size: 2rem; color: var(--primary-color);">
-                                <i class="fas fa-ticket-alt"></i>
+                            <div class="booking-icon" style="font-size: 2.5rem; color: ${isEV ? '#2ecc71' : 'var(--primary-color)'};">
+                                <i class="fas ${isEV ? 'fa-charging-station' : 'fa-ticket-alt'}"></i>
+                                ${isEV ? '<br><small style="font-size: 0.7rem; display:block; margin-top: 5px; font-weight:bold;">EV ⚡</small>' : ''}
                             </div>
                             <div class="booking-info">
-                                <h3>Booking #${booking.id}</h3>
-                                <p style="font-weight: 600; color: var(--text-color);">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                    <h3>Booking #${booking.id}</h3>
+                                    <span class="status-badge ${statusClass}">${booking.entry_status}</span>
+                                </div>
+                                <p style="font-weight: 600; color: var(--text-color); margin: 0.5rem 0;">
                                     <i class="fas fa-map-marker-alt" style="color: var(--danger);"></i> 
                                     ${booking.city_name} - ${booking.place_name}
                                 </p>
-                                <div class="booking-details">
+                                
+                                <div class="booking-details" style="background: rgba(0,0,0,0.03); padding: 1rem; border-radius: 8px;">
                                     <div class="detail-item">Vehicle <strong>${booking.vehicle_number}</strong></div>
-                                    <div class="detail-item">Slot <strong>${booking.slot_id}</strong></div>
-                                    <div class="detail-item">Date <strong>${new Date(booking.date).toLocaleDateString()}</strong></div>
-                                    <div class="detail-item">Time <strong>${booking.start_time.substring(0,5)} - ${booking.end_time.substring(0,5)}</strong></div>
+                                    <div class="detail-item">Slot <strong>${booking.slot_number}</strong></div>
+                                    <div class="detail-item">Type <strong>${booking.slot_type.toUpperCase()}</strong></div>
+                                    <div class="detail-item">Rate <strong>₹${parseFloat(booking.price_per_hour).toFixed(2)}/hr</strong></div>
                                 </div>
+
+                                ${isExited ? `
+                                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--glass-border); display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                    <div class="detail-item">Entry <strong style="font-size: 0.8rem;">${new Date(booking.entry_time).toLocaleString()}</strong></div>
+                                    <div class="detail-item">Exit <strong style="font-size: 0.8rem;">${new Date(booking.exit_time).toLocaleString()}</strong></div>
+                                    <div class="detail-item">Total Duration <strong>${durationText}</strong></div>
+                                    <div class="detail-item">Final Amount <strong style="color: var(--primary-color); font-size: 1.1rem;">₹${parseFloat(booking.total_cost).toFixed(2)}</strong></div>
+                                </div>
+                                <div style="margin-top: 1rem; text-align: right;">
+                                    <button class="btn btn-outline" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;" onclick="window.print()">
+                                        <i class="fas fa-download"></i> Download Bill
+                                    </button>
+                                </div>
+                                ` : `
+                                <div class="booking-details">
+                                    <div class="detail-item">Date <strong>${new Date(booking.booking_date || booking.date).toLocaleDateString()}</strong></div>
+                                    <div class="detail-item">Scheduled <strong>${booking.start_time.substring(0,5)} - ${booking.end_time.substring(0,5)}</strong></div>
+                                </div>
+                                `}
                             </div>
-                            <div style="text-align: right;">
-                                <span class="status-badge ${statusClass}">${booking.entry_status}</span>
-                                <div style="margin-top: 1rem; font-weight: 700; color: var(--primary-color); font-size: 1.2rem;">
+                            <div style="text-align: right; min-width: 120px;">
+                                <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.2rem;">Total Cost</div>
+                                <div style="font-weight: 700; color: var(--primary-color); font-size: 1.5rem;">
                                     ₹${parseFloat(booking.total_cost).toFixed(2)}
                                 </div>
                             </div>

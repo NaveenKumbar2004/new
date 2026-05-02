@@ -96,7 +96,7 @@
             <!-- Add Slot Section -->
             <div class="admin-section glass">
                 <h3 style="margin-bottom: 1rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem;"><i class="fas fa-plus-circle"></i> Add Parking Slot</h3>
-                <div style="display: grid; grid-template-columns: 1fr 1fr 0.8fr 0.7fr; gap: 1rem; align-items: flex-end;">
+                <div style="display: grid; grid-template-columns: 1.2fr 1.2fr 0.8fr 1fr 1fr 0.6fr; gap: 0.8rem; align-items: flex-end;">
                     <div class="form-group" style="margin-bottom: 0;">
                         <select id="slotCitySelect" class="form-control" required>
                             <option value="" disabled selected>City</option>
@@ -110,7 +110,16 @@
                     <div class="form-group" style="margin-bottom: 0;">
                         <input type="text" id="newSlotId" class="form-control" placeholder="A1" required style="text-transform: uppercase;">
                     </div>
-                    <button class="btn btn-primary" onclick="addNewSlot()">Add</button>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <select id="slotTypeSelect" class="form-control">
+                            <option value="normal">Normal</option>
+                            <option value="ev">EV Charging ⚡</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <input type="number" id="slotPriceInput" class="form-control" placeholder="Rate (₹)" value="20">
+                    </div>
+                    <button class="btn btn-primary" onclick="addNewSlot()" title="Add Slot"><i class="fas fa-plus"></i></button>
                 </div>
             </div>
         </div>
@@ -125,6 +134,7 @@
                         <tr>
                             <th>Slot ID</th>
                             <th>Type</th>
+                            <th>Rate (₹/hr)</th>
                             <th>Status</th>
                             <th>Action</th>
                         </tr>
@@ -251,6 +261,9 @@
         window.addNewSlot = async () => {
             const slotInput = document.getElementById('newSlotId');
             const placeSelect = document.getElementById('slotPlaceSelect');
+            const typeSelect = document.getElementById('slotTypeSelect');
+            const priceInput = document.getElementById('slotPriceInput');
+            
             const slotId = slotInput.value.trim().toUpperCase();
             
             if (!placeSelect.value) {
@@ -266,7 +279,12 @@
                 const res = await fetch(`${window.API_BASE}/add-slot`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ place_id: placeSelect.value, slot_number: slotId, type: 'car' })
+                    body: JSON.stringify({ 
+                        place_id: placeSelect.value, 
+                        slot_number: slotId, 
+                        slot_type: typeSelect.value,
+                        price_per_hour: priceInput.value || 20
+                    })
                 });
                 const result = await res.json();
                 
@@ -326,10 +344,13 @@
                     result.data.forEach(slot => {
                         const tr = document.createElement('tr');
                         const statusColor = slot.status === 'available' ? 'var(--success)' : 'var(--danger)';
-                        
+                        const typeLabel = slot.slot_type === 'ev' ? 'EV ⚡' : 'NORMAL';
+                        const typeColor = slot.slot_type === 'ev' ? '#2ecc71' : 'var(--text-muted)';
+
                         tr.innerHTML = `
                             <td style="font-weight: 600;">${slot.slot_number}</td>
-                            <td><span class="badge" style="background: var(--glass-bg);">${slot.type.toUpperCase()}</span></td>
+                            <td><span class="badge" style="background: rgba(0,0,0,0.05); color: ${typeColor}">${typeLabel}</span></td>
+                            <td style="font-weight: 500;">₹${parseFloat(slot.price_per_hour).toFixed(2)}</td>
                             <td><span style="color: ${statusColor}; font-weight: 500;">${slot.status.toUpperCase()}</span></td>
                             <td>
                                 <button class="btn btn-outline action-btn delete-btn" style="color: var(--danger); border-color: var(--danger);">Delete</button>
