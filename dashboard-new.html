@@ -183,16 +183,22 @@
                         card.style.animationDelay = `${Math.min(index * 0.05, 1)}s`;
                         card.classList.add('fade-in');
                         
-                        const icon = slot.type === 'car' ? 'fa-car-side' : 'fa-motorcycle';
+                        const isEV = slot.slot_type === 'ev';
+                        const vIcon = slot.vehicle_type === 'bike' ? 'fa-motorcycle' : 'fa-car';
                         const statusText = slot.status === 'available' ? 'Available' : 'Occupied';
                         
                         card.innerHTML = `
-                            <div class="slot-icon" style="color: ${slot.status === 'available' ? 'var(--success)' : 'var(--danger)'}">
-                                <i class="fas ${slot.status === 'available' ? 'fa-parking' : icon}"></i>
+                            <div class="slot-icon" style="color: ${slot.status === 'available' ? 'var(--success)' : 'var(--danger)'}; position: relative;">
+                                <i class="fas ${slot.status === 'available' ? (isEV ? 'fa-charging-station' : 'fa-parking') : vIcon}"></i>
+                                ${isEV ? '<i class="fas fa-bolt" style="position: absolute; top: -5px; right: -5px; font-size: 0.8rem; color: #f1c40f;"></i>' : ''}
                             </div>
                             <div>
-                                <h3 style="margin-bottom: 0.5rem; color: var(--text-color);">Slot ${slot.slot_number}</h3>
+                                <h3 style="margin-bottom: 0.3rem; color: var(--text-color); display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                                    Slot ${slot.slot_number}
+                                    ${isEV ? '<span style="font-size: 0.6rem; background: #2ecc71; color: white; padding: 2px 5px; border-radius: 4px;">EV</span>' : ''}
+                                </h3>
                                 <span class="slot-status status-${slot.status}">${statusText}</span>
+                                <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.3rem;">₹${parseFloat(slot.price_per_hour).toFixed(0)}/hr</div>
                             </div>
                         `;
 

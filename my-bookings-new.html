@@ -35,14 +35,62 @@
         .status-entered { background: #d4edda; color: #155724; }
         .status-exited { background: #cce5ff; color: #004085; }
         
-        .booking-info h3 { margin-bottom: 0.5rem; color: var(--primary-color); }
-        .booking-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-top: 1rem; }
-        .detail-item { font-size: 0.9rem; color: var(--text-muted); }
-        .detail-item strong { color: var(--text-color); display: block; margin-top: 0.2rem; }
-        
-        @media (max-width: 768px) {
-            .booking-card { grid-template-columns: 1fr; gap: 1rem; text-align: center; }
-            .booking-details { grid-template-columns: 1fr 1fr; }
+        /* Receipt Styling */
+        .receipt-card {
+            background: #fff;
+            color: #333;
+            padding: 2rem;
+            border-radius: 4px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            border: 1px solid #eee;
+            position: relative;
+            overflow: hidden;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        .receipt-header {
+            text-align: center;
+            border-bottom: 2px dashed #eee;
+            padding-bottom: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .receipt-logo {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+        .receipt-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.8rem;
+            font-size: 0.95rem;
+        }
+        .receipt-label { color: #777; }
+        .receipt-value { font-weight: 600; }
+        .receipt-total {
+            border-top: 2px solid #333;
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            font-size: 1.3rem;
+            font-weight: 800;
+            display: flex;
+            justify-content: space-between;
+            color: var(--primary-color);
+        }
+        .receipt-footer {
+            text-align: center;
+            margin-top: 2rem;
+            font-size: 0.8rem;
+            color: #999;
+            font-style: italic;
+        }
+
+        @media print {
+            body * { visibility: hidden; }
+            .receipt-card, .receipt-card * { visibility: visible; }
+            .receipt-card { position: absolute; left: 0; top: 0; width: 100%; border: none; box-shadow: none; }
+            .btn-download { display: none !important; }
         }
     </style>
 </head>
@@ -110,64 +158,106 @@
                         const card = document.createElement('div');
                         card.className = 'booking-card glass fade-in';
                         
-                        const isExited = booking.entry_status === 'exited';
-                        const isEV = booking.slot_type === 'ev';
-                        
-                        let durationText = 'N/A';
-                        if (booking.entry_time && booking.exit_time) {
-                            const diff = new Date(booking.exit_time) - new Date(booking.entry_time);
-                            const hours = Math.ceil(diff / (1000 * 60 * 60));
-                            durationText = `${hours} hr${hours > 1 ? 's' : ''}`;
-                        }
-
-                        card.innerHTML = `
-                            <div class="booking-icon" style="font-size: 2.5rem; color: ${isEV ? '#2ecc71' : 'var(--primary-color)'};">
-                                <i class="fas ${isEV ? 'fa-charging-station' : 'fa-ticket-alt'}"></i>
-                                ${isEV ? '<br><small style="font-size: 0.7rem; display:block; margin-top: 5px; font-weight:bold;">EV ⚡</small>' : ''}
-                            </div>
-                            <div class="booking-info">
-                                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                                    <h3>Booking #${booking.id}</h3>
-                                    <span class="status-badge ${statusClass}">${booking.entry_status}</span>
+                        if (isExited) {
+                            card.className = 'receipt-card fade-in';
+                            card.innerHTML = `
+                                <div class="receipt-header">
+                                    <div class="receipt-logo">
+                                        <i class="fas fa-parking"></i> SmartPark
+                                    </div>
+                                    <div style="font-size: 0.8rem; color: #777;">PARKING RECEIPT</div>
+                                    <div style="margin-top: 0.5rem; font-weight: 600;">ID: ${booking.id}</div>
                                 </div>
-                                <p style="font-weight: 600; color: var(--text-color); margin: 0.5rem 0;">
-                                    <i class="fas fa-map-marker-alt" style="color: var(--danger);"></i> 
-                                    ${booking.city_name} - ${booking.place_name}
-                                </p>
                                 
-                                <div class="booking-details" style="background: rgba(0,0,0,0.03); padding: 1rem; border-radius: 8px;">
-                                    <div class="detail-item">Vehicle <strong>${booking.vehicle_number}</strong></div>
-                                    <div class="detail-item">Slot <strong>${booking.slot_number}</strong></div>
-                                    <div class="detail-item">Type <strong>${booking.slot_type.toUpperCase()}</strong></div>
-                                    <div class="detail-item">Rate <strong>₹${parseFloat(booking.price_per_hour).toFixed(2)}/hr</strong></div>
+                                <div class="receipt-body">
+                                    <div class="receipt-row">
+                                        <span class="receipt-label">City</span>
+                                        <span class="receipt-value">${booking.city_name}</span>
+                                    </div>
+                                    <div class="receipt-row">
+                                        <span class="receipt-label">Location</span>
+                                        <span class="receipt-value">${booking.place_name}</span>
+                                    </div>
+                                    <div class="receipt-row">
+                                        <span class="receipt-label">Vehicle</span>
+                                        <span class="receipt-value">${booking.vehicle_number}</span>
+                                    </div>
+                                    <div class="receipt-row">
+                                        <span class="receipt-label">Slot</span>
+                                        <span class="receipt-value">${booking.slot_number} (${booking.slot_type.toUpperCase()})</span>
+                                    </div>
+                                    <div style="margin: 1.5rem 0; border-top: 1px solid #eee; padding-top: 1rem;">
+                                        <div class="receipt-row">
+                                            <span class="receipt-label"><i class="far fa-clock"></i> Entry</span>
+                                            <span class="receipt-value" style="font-size: 0.8rem;">${new Date(booking.entry_time).toLocaleString()}</span>
+                                        </div>
+                                        <div class="receipt-row">
+                                            <span class="receipt-label"><i class="far fa-clock"></i> Exit</span>
+                                            <span class="receipt-value" style="font-size: 0.8rem;">${new Date(booking.exit_time).toLocaleString()}</span>
+                                        </div>
+                                        <div class="receipt-row">
+                                            <span class="receipt-label">Duration</span>
+                                            <span class="receipt-value">${durationText}</span>
+                                        </div>
+                                        <div class="receipt-row">
+                                            <span class="receipt-label">Hourly Rate</span>
+                                            <span class="receipt-value">₹${parseFloat(booking.price_per_hour).toFixed(2)}</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="receipt-total">
+                                        <span>Total Amount</span>
+                                        <span>₹${parseFloat(booking.total_cost).toFixed(2)}</span>
+                                    </div>
                                 </div>
 
-                                ${isExited ? `
-                                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--glass-border); display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                                    <div class="detail-item">Entry <strong style="font-size: 0.8rem;">${new Date(booking.entry_time).toLocaleString()}</strong></div>
-                                    <div class="detail-item">Exit <strong style="font-size: 0.8rem;">${new Date(booking.exit_time).toLocaleString()}</strong></div>
-                                    <div class="detail-item">Total Duration <strong>${durationText}</strong></div>
-                                    <div class="detail-item">Final Amount <strong style="color: var(--primary-color); font-size: 1.1rem;">₹${parseFloat(booking.total_cost).toFixed(2)}</strong></div>
+                                <div class="receipt-footer">
+                                    Thank you for using SmartPark!<br>
+                                    Have a safe journey.
                                 </div>
-                                <div style="margin-top: 1rem; text-align: right;">
-                                    <button class="btn btn-outline" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;" onclick="window.print()">
-                                        <i class="fas fa-download"></i> Download Bill
+
+                                <div style="margin-top: 2rem; text-align: center;">
+                                    <button class="btn btn-primary btn-download" onclick="window.print()" style="width: 100%;">
+                                        <i class="fas fa-print"></i> Print Receipt
                                     </button>
                                 </div>
-                                ` : `
-                                <div class="booking-details">
-                                    <div class="detail-item">Date <strong>${new Date(booking.booking_date || booking.date).toLocaleDateString()}</strong></div>
-                                    <div class="detail-item">Scheduled <strong>${booking.start_time.substring(0,5)} - ${booking.end_time.substring(0,5)}</strong></div>
+                            `;
+                        } else {
+                            card.innerHTML = `
+                                <div class="booking-icon" style="font-size: 2.5rem; color: ${isEV ? '#2ecc71' : 'var(--primary-color)'};">
+                                    <i class="fas ${isEV ? 'fa-charging-station' : 'fa-ticket-alt'}"></i>
+                                    ${isEV ? '<br><small style="font-size: 0.7rem; display:block; margin-top: 5px; font-weight:bold;">EV ⚡</small>' : ''}
                                 </div>
-                                `}
-                            </div>
-                            <div style="text-align: right; min-width: 120px;">
-                                <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.2rem;">Total Cost</div>
-                                <div style="font-weight: 700; color: var(--primary-color); font-size: 1.5rem;">
-                                    ₹${parseFloat(booking.total_cost).toFixed(2)}
+                                <div class="booking-info">
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                        <h3>Booking #${booking.id}</h3>
+                                        <span class="status-badge ${statusClass}">${booking.entry_status}</span>
+                                    </div>
+                                    <p style="font-weight: 600; color: var(--text-color); margin: 0.5rem 0;">
+                                        <i class="fas fa-map-marker-alt" style="color: var(--danger);"></i> 
+                                        ${booking.city_name} - ${booking.place_name}
+                                    </p>
+                                    
+                                    <div class="booking-details" style="background: rgba(0,0,0,0.03); padding: 1rem; border-radius: 8px;">
+                                        <div class="detail-item">Vehicle <strong>${booking.vehicle_number}</strong></div>
+                                        <div class="detail-item">Slot <strong>${booking.slot_number}</strong></div>
+                                        <div class="detail-item">Type <strong>${booking.slot_type.toUpperCase()}</strong></div>
+                                        <div class="detail-item">Rate <strong>₹${parseFloat(booking.price_per_hour).toFixed(2)}/hr</strong></div>
+                                    </div>
+
+                                    <div class="booking-details">
+                                        <div class="detail-item">Date <strong>${new Date(booking.booking_date || booking.date).toLocaleDateString()}</strong></div>
+                                        <div class="detail-item">Scheduled <strong>${booking.start_time.substring(0,5)} - ${booking.end_time.substring(0,5)}</strong></div>
+                                    </div>
                                 </div>
-                            </div>
-                        `;
+                                <div style="text-align: right; min-width: 120px;">
+                                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.2rem;">Estimate</div>
+                                    <div style="font-weight: 700; color: var(--primary-color); font-size: 1.5rem;">
+                                        ₹${parseFloat(booking.total_cost).toFixed(2)}
+                                    </div>
+                                </div>
+                            `;
+                        }
                         list.appendChild(card);
                     });
                 } else {

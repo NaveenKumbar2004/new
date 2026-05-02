@@ -83,21 +83,21 @@
         <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 2rem; margin-bottom: 2rem;">
             <!-- Settings Section -->
             <div class="admin-section glass">
-                <h3 style="margin-bottom: 1rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem;"><i class="fas fa-cog"></i> Global Pricing Settings</h3>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-                    <div style="display: flex; gap: 1rem; align-items: flex-end;">
-                        <div class="form-group" style="margin-bottom: 0; flex: 1;">
-                            <input type="number" step="0.01" id="feeInput" class="form-control" required>
-                            <label for="feeInput" class="floating-label" style="top: 0; font-size: 0.8rem; color: var(--primary-color);">Normal Parking Fee (₹/hr)</label>
+                <h3 style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.7rem;"><i class="fas fa-cog"></i> Global Pricing Settings</h3>
+                <div style="display: flex; flex-direction: column; gap: 2rem;">
+                    <div style="display: flex; gap: 1.5rem; align-items: flex-end;">
+                        <div class="form-group" style="margin-bottom: 0; flex: 1; position: relative;">
+                            <input type="number" step="0.01" id="feeInput" class="form-control" required style="padding-top: 1.5rem;">
+                            <label for="feeInput" class="floating-label" style="top: 0; font-size: 0.8rem; color: var(--primary-color); transform: none;">Normal Parking Fee (₹/hr)</label>
                         </div>
-                        <button class="btn btn-primary" onclick="window.saveFee('normal')">Update</button>
+                        <button class="btn btn-primary" onclick="window.saveFee('normal')" style="min-width: 100px;">Update</button>
                     </div>
-                    <div style="display: flex; gap: 1rem; align-items: flex-end;">
-                        <div class="form-group" style="margin-bottom: 0; flex: 1;">
-                            <input type="number" step="0.01" id="evFeeInput" class="form-control" required>
-                            <label for="evFeeInput" class="floating-label" style="top: 0; font-size: 0.8rem; color: #2ecc71;">EV Parking Fee (₹/hr)</label>
+                    <div style="display: flex; gap: 1.5rem; align-items: flex-end;">
+                        <div class="form-group" style="margin-bottom: 0; flex: 1; position: relative;">
+                            <input type="number" step="0.01" id="evFeeInput" class="form-control" required style="padding-top: 1.5rem;">
+                            <label for="evFeeInput" class="floating-label" style="top: 0; font-size: 0.8rem; color: #2ecc71; transform: none;">EV Parking Fee (₹/hr)</label>
                         </div>
-                        <button class="btn btn-primary" style="background: #2ecc71; border-color: #2ecc71;" onclick="window.saveFee('ev')">Update</button>
+                        <button class="btn btn-primary" style="background: #2ecc71; border-color: #2ecc71; min-width: 100px;" onclick="window.saveFee('ev')">Update</button>
                     </div>
                 </div>
             </div>
