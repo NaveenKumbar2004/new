@@ -149,6 +149,39 @@ app.post('/api/login', async (req, res) => {
 });
 
 
+app.post('/api/reset-password', async (req, res) => {
+    try {
+        const { username, vehicle_number, new_password } = req.body;
+        console.log(`[AUTH] Password reset attempt for: ${username}`);
+
+        if (!username || !vehicle_number || !new_password) {
+            return res.status(400).json({ status: 'fail', message: 'All fields are required' });
+        }
+
+        // Verify if username and vehicle number match
+        const [rows] = await pool.query(`
+            SELECT u.id FROM Users u 
+            JOIN Vehicles v ON u.id = v.user_id 
+            WHERE u.username = ? AND v.vehicle_number = ?
+        `, [username, vehicle_number.trim().toUpperCase()]);
+
+        if (rows.length === 0) {
+            console.warn(`[AUTH] Reset failed: Username and Vehicle mismatch for ${username}`);
+            return res.status(401).json({ status: 'fail', message: 'Invalid username or vehicle number' });
+        }
+
+        // Update to new password (plain text)
+        await pool.query('UPDATE Users SET password_hash = ? WHERE id = ?', [new_password, rows[0].id]);
+        
+        console.log(`[AUTH] Password reset successful for ${username}`);
+        res.json({ status: 'success', message: 'Password reset successful' });
+    } catch (err) {
+        console.error("[AUTH ERROR] Reset Password:", err);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
+
+
 // ==========================================
 // VEHICLE APIs
 // ==========================================
