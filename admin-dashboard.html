@@ -83,20 +83,29 @@
         <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 2rem; margin-bottom: 2rem;">
             <!-- Settings Section -->
             <div class="admin-section glass">
-                <h3 style="margin-bottom: 1rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem;"><i class="fas fa-cog"></i> Global Settings</h3>
-                <div style="display: flex; gap: 1rem; align-items: flex-end;">
-                    <div class="form-group" style="margin-bottom: 0; flex: 1;">
-                        <input type="number" step="0.01" id="feeInput" class="form-control" required>
-                        <label for="feeInput" class="floating-label" style="top: 0; font-size: 0.8rem; color: var(--primary-color);">Parking Fee Per Hour (₹)</label>
+                <h3 style="margin-bottom: 1rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem;"><i class="fas fa-cog"></i> Global Pricing Settings</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                    <div style="display: flex; gap: 1rem; align-items: flex-end;">
+                        <div class="form-group" style="margin-bottom: 0; flex: 1;">
+                            <input type="number" step="0.01" id="feeInput" class="form-control" required>
+                            <label for="feeInput" class="floating-label" style="top: 0; font-size: 0.8rem; color: var(--primary-color);">Normal Parking Fee (₹/hr)</label>
+                        </div>
+                        <button class="btn btn-primary" onclick="window.saveFee('normal')">Update</button>
                     </div>
-                    <button class="btn btn-primary" onclick="window.saveFee(event)">Update</button>
+                    <div style="display: flex; gap: 1rem; align-items: flex-end;">
+                        <div class="form-group" style="margin-bottom: 0; flex: 1;">
+                            <input type="number" step="0.01" id="evFeeInput" class="form-control" required>
+                            <label for="evFeeInput" class="floating-label" style="top: 0; font-size: 0.8rem; color: #2ecc71;">EV Parking Fee (₹/hr)</label>
+                        </div>
+                        <button class="btn btn-primary" style="background: #2ecc71; border-color: #2ecc71;" onclick="window.saveFee('ev')">Update</button>
+                    </div>
                 </div>
             </div>
 
             <!-- Add Slot Section -->
             <div class="admin-section glass">
                 <h3 style="margin-bottom: 1rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem;"><i class="fas fa-plus-circle"></i> Add Parking Slot</h3>
-                <div style="display: grid; grid-template-columns: 1.2fr 1.2fr 0.8fr 1fr 1fr 0.6fr; gap: 0.8rem; align-items: flex-end;">
+                <div style="display: grid; grid-template-columns: 1.5fr 1.5fr 1fr 1fr 0.6fr; gap: 0.8rem; align-items: flex-end;">
                     <div class="form-group" style="margin-bottom: 0;">
                         <select id="slotCitySelect" class="form-control" required>
                             <option value="" disabled selected>City</option>
@@ -109,15 +118,13 @@
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
                         <input type="text" id="newSlotId" class="form-control" placeholder="A1" required style="text-transform: uppercase;">
+                        <label class="floating-label">Slot ID</label>
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
                         <select id="slotTypeSelect" class="form-control">
                             <option value="normal">Normal</option>
                             <option value="ev">EV Charging ⚡</option>
                         </select>
-                    </div>
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <input type="number" id="slotPriceInput" class="form-control" placeholder="Rate (₹)" value="20">
                     </div>
                     <button class="btn btn-primary" onclick="addNewSlot()" title="Add Slot"><i class="fas fa-plus"></i></button>
                 </div>
@@ -181,9 +188,15 @@
         document.addEventListener('DOMContentLoaded', async () => {
             initDB(); 
             
-            // Sync current fee from server
-            const serverFee = await fetchSettingsFromServer();
-            document.getElementById('feeInput').value = serverFee;
+            // Sync current fees from server
+            try {
+                const res = await fetch(`${window.API_BASE}/settings`);
+                const result = await res.json();
+                if (result.status === 'success') {
+                    document.getElementById('feeInput').value = result.data.parking_fee || 20;
+                    document.getElementById('evFeeInput').value = result.data.ev_parking_fee || 50;
+                }
+            } catch (e) { console.error("Settings load error:", e); }
             
             initLocationSelectors();
             renderAdminBookings();
@@ -233,24 +246,39 @@
         }
 
 
-        window.saveFee = async (e) => {
-            const btn = e.target;
+        window.saveFee = async (type) => {
+            const isEV = type === 'ev';
+            const inputId = isEV ? 'evFeeInput' : 'feeInput';
+            const newFee = document.getElementById(inputId).value;
+            const btn = event.target;
             const originalText = btn.innerHTML;
-            const newFee = document.getElementById('feeInput').value;
             
             if (newFee && newFee > 0) {
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
                 btn.disabled = true;
                 
-                const success = await updateFeeOnServer(newFee);
-                
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-                
-                if (success) {
-                    showToast('✅ Database Updated: Parking fee set to ₹' + newFee, 'success');
-                } else {
-                    showToast('❌ Update Failed', 'error');
+                try {
+                    const body = isEV ? { ev_parking_fee: newFee } : { parking_fee: newFee };
+                    const res = await fetch(`${window.API_BASE}/settings`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body)
+                    });
+                    const result = await res.json();
+                    
+                    if (result.status === 'success') {
+                        showToast(`✅ ${type.toUpperCase()} fee set to ₹${newFee}`, 'success');
+                        // Reload slots to show new prices
+                        const placeId = document.getElementById('slotPlaceSelect').value;
+                        if (placeId) renderAdminSlots(placeId);
+                    } else {
+                        showToast('❌ Update Failed', 'error');
+                    }
+                } catch (e) {
+                    showToast('Network error', 'error');
+                } finally {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
                 }
             } else {
                 showToast('Invalid fee amount', 'error');
@@ -262,7 +290,6 @@
             const slotInput = document.getElementById('newSlotId');
             const placeSelect = document.getElementById('slotPlaceSelect');
             const typeSelect = document.getElementById('slotTypeSelect');
-            const priceInput = document.getElementById('slotPriceInput');
             
             const slotId = slotInput.value.trim().toUpperCase();
             
@@ -282,8 +309,7 @@
                     body: JSON.stringify({ 
                         place_id: placeSelect.value, 
                         slot_number: slotId, 
-                        slot_type: typeSelect.value,
-                        price_per_hour: priceInput.value || 20
+                        slot_type: typeSelect.value
                     })
                 });
                 const result = await res.json();

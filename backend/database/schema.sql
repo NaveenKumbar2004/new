@@ -99,4 +99,4 @@ INSERT INTO ParkingSlots (place_id, slot_number, slot_type, price_per_hour) VALU
 (2, 'C2', 'ev', 60.00), 
 (2, 'M1', 'normal', 15.00);
 
-INSERT INTO SystemSettings (setting_key, setting_value) VALUES ('parking_fee', '20.00');
+INSERT INTO SystemSettings (setting_key, setting_value) VALUES ('parking_fee', '20.00'), ('ev_parking_fee', '50.00');

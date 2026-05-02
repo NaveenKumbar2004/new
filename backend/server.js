@@ -270,11 +270,16 @@ app.get('/api/slots/:placeId', async (req, res) => {
 
 app.post('/api/add-slot', async (req, res) => {
     try {
-        const { place_id, slot_number, slot_type = 'normal', price_per_hour = 20.00, vehicle_type = 'car' } = req.body;
+        const { place_id, slot_number, slot_type = 'normal', vehicle_type = 'car' } = req.body;
         const cleanNum = slot_number.trim().toUpperCase();
 
+        // Get default price from settings based on type
+        const settingKey = slot_type === 'ev' ? 'ev_parking_fee' : 'parking_fee';
+        const [settings] = await pool.query('SELECT setting_value FROM SystemSettings WHERE setting_key = ?', [settingKey]);
+        const defaultPrice = settings.length > 0 ? parseFloat(settings[0].setting_value) : 20.00;
+
         await pool.query('INSERT INTO ParkingSlots (place_id, slot_number, status, slot_type, price_per_hour, vehicle_type) VALUES (?, ?, ?, ?, ?, ?)',
-            [place_id, cleanNum, 'available', slot_type, price_per_hour, vehicle_type]);
+            [place_id, cleanNum, 'available', slot_type, defaultPrice, vehicle_type]);
         res.json({ status: 'success', message: 'Slot added successfully' });
     } catch (err) {
         if (err.code === 'ER_DUP_ENTRY') {
@@ -372,9 +377,9 @@ app.post('/api/book-slot', async (req, res) => {
             return res.status(401).json({ status: 'fail', message: 'Unauthorized' });
         }
 
-        // Insert booking
+        // Insert booking (Fixed column name to booking_date)
         await connection.query(
-            `INSERT INTO Bookings (id, user_id, city_id, place_id, vehicle_id, slot_id, date, start_time, end_time, total_cost) 
+            `INSERT INTO Bookings (id, user_id, city_id, place_id, vehicle_id, slot_id, booking_date, start_time, end_time, total_cost) 
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [booking_id, userId, city_id, place_id, vehicle_id, slot_id, date, start_time, end_time, total_cost]
         );
@@ -574,27 +579,29 @@ app.get('/api/settings', async (req, res) => {
 });
 
 app.post('/api/settings', async (req, res) => {
+    const connection = await pool.getConnection();
     try {
-        const { parking_fee } = req.body;
+        await connection.beginTransaction();
+        const { parking_fee, ev_parking_fee } = req.body;
+        
         if (parking_fee) {
-            // First try to update
-            const [result] = await pool.query(
-                'UPDATE SystemSettings SET setting_value = ? WHERE setting_key = ?',
-                [parking_fee.toString(), 'parking_fee']
-            );
-
-            // If no rows updated, it doesn't exist, so insert
-            if (result.affectedRows === 0) {
-                await pool.query(
-                    'INSERT INTO SystemSettings (setting_key, setting_value) VALUES (?, ?)',
-                    ['parking_fee', parking_fee.toString()]
-                );
-            }
+            await connection.query('UPDATE SystemSettings SET setting_value = ? WHERE setting_key = ?', [parking_fee.toString(), 'parking_fee']);
+            await connection.query('UPDATE ParkingSlots SET price_per_hour = ? WHERE slot_type = \'normal\'', [parking_fee]);
         }
-        res.json({ status: 'success', message: 'Settings updated' });
+        
+        if (ev_parking_fee) {
+            await connection.query('UPDATE SystemSettings SET setting_value = ? WHERE setting_key = ?', [ev_parking_fee.toString(), 'ev_parking_fee']);
+            await connection.query('UPDATE ParkingSlots SET price_per_hour = ? WHERE slot_type = \'ev\'', [ev_parking_fee]);
+        }
+
+        await connection.commit();
+        res.json({ status: 'success', message: 'Settings and related slots updated' });
     } catch (err) {
+        await connection.rollback();
         console.error("API Error (/api/settings):", err);
         res.status(500).json({ status: 'error', message: 'DB Error: ' + err.message });
+    } finally {
+        connection.release();
     }
 });
 
