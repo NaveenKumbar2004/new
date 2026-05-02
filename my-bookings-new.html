@@ -158,6 +158,16 @@
                         const card = document.createElement('div');
                         card.className = 'booking-card glass fade-in';
                         
+                        const isExited = booking.entry_status === 'exited';
+                        const isEV = booking.slot_type === 'ev';
+                        
+                        let durationText = 'N/A';
+                        if (booking.entry_time && booking.exit_time) {
+                            const diff = new Date(booking.exit_time) - new Date(booking.entry_time);
+                            const hours = Math.ceil(diff / (1000 * 60 * 60));
+                            durationText = `${hours} hr${hours > 1 ? 's' : ''}`;
+                        }
+
                         if (isExited) {
                             card.className = 'receipt-card fade-in';
                             card.innerHTML = `

@@ -3,53 +3,327 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    <title>User Login - Smart Parking</title>
+    <title>Login - SmartPark</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --park-teal: #0d7377;
+            --park-dark: #143d59;
+            --input-bg: #f0f2f5;
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --text-main: #2d3436;
+            --text-sub: #636e72;
+            --overlay: rgba(233, 236, 239, 0.4);
+        }
+
+        [data-theme="dark"] {
+            --park-teal: #14ffec;
+            --park-dark: #0d7377;
+            --input-bg: #2d3436;
+            --card-bg: rgba(26, 26, 26, 0.95);
+            --text-main: #ffffff;
+            --text-sub: #b2bec3;
+            --overlay: rgba(0, 0, 0, 0.7);
+        }
+
+        body {
+            background: url('app_bg.png') center/cover no-repeat;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            font-family: 'Inter', -apple-system, sans-serif;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--overlay);
+            z-index: 0;
+            transition: background 0.3s ease;
+        }
+
+        .login-wrapper {
+            background: var(--card-bg);
+            width: 1000px;
+            max-width: 95%;
+            min-height: 600px;
+            border-radius: 40px;
+            display: flex;
+            position: relative;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            z-index: 1;
+            backdrop-filter: blur(10px);
+            transition: background 0.3s ease;
+        }
+
+        .login-left {
+            flex: 1.2;
+            padding: 3.5rem 4rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .login-right {
+            flex: 1;
+            padding: 1.5rem;
+            display: flex;
+        }
+
+        .image-container {
+            width: 100%;
+            height: 100%;
+            border-radius: 30px;
+            overflow: hidden;
+            background: rgba(0,0,0,0.05);
+        }
+
+        .image-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 30px;
+        }
+
+        .top-actions {
+            position: absolute;
+            top: 2rem;
+            right: 2rem;
+            display: flex;
+            gap: 1rem;
+            z-index: 10;
+        }
+
+        .action-btn {
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        [data-theme="dark"] .action-btn {
+            background: rgba(0,0,0,0.4);
+            color: var(--park-teal);
+        }
+
+        .action-btn:hover {
+            background: var(--park-teal);
+            color: white;
+            transform: translateY(-3px);
+        }
+
+        .brand-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            font-weight: 800;
+            font-size: 1.4rem;
+            color: var(--text-main);
+            margin-bottom: 3.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .brand-logo i {
+            color: var(--park-teal);
+            font-size: 1.8rem;
+        }
+
+        .welcome-text {
+            font-size: 2.8rem;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 2.5rem;
+            color: var(--text-main);
+        }
+
+        .welcome-text span {
+            color: var(--park-teal);
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-sub);
+        }
+
+        .input-box {
+            width: 100%;
+            background: var(--input-bg);
+            border: none;
+            padding: 1.1rem 1.2rem;
+            border-radius: 12px;
+            font-size: 1rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.3s ease;
+            color: var(--text-main);
+        }
+
+        .input-box:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px var(--park-teal);
+        }
+
+        .options-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2.5rem;
+            font-size: 0.9rem;
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            color: var(--text-sub);
+            cursor: pointer;
+        }
+
+        .forgot-link {
+            color: var(--park-teal);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .login-btn {
+            background: linear-gradient(135deg, var(--park-teal) 0%, var(--park-dark) 100%);
+            color: white;
+            border: none;
+            padding: 1.1rem 3rem;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            width: 160px;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+
+        #loginError {
+            background: #ff7675;
+            color: white;
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            display: none;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .register-link {
+            margin-top: auto;
+            font-size: 0.9rem;
+            color: var(--text-sub);
+        }
+
+        .register-link a {
+            color: var(--park-teal);
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 900px) {
+            .login-wrapper {
+                flex-direction: column;
+                width: 95%;
+                min-height: auto;
+                border-radius: 25px;
+            }
+            .login-right {
+                display: none; /* Hide image on mobile for better focus */
+            }
+            .login-left {
+                padding: 2.5rem 2rem;
+            }
+            .welcome-text {
+                font-size: 2rem;
+            }
+            .brand-logo {
+                margin-bottom: 2rem;
+            }
+            .top-actions {
+                top: 1rem;
+                right: 1rem;
+            }
+            .action-btn {
+                width: 40px;
+                height: 40px;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div class="auth-container">
-        <a href="index.html" style="position: absolute; top: 2rem; left: 2rem; color: white; text-decoration: none; font-size: 1.2rem; z-index: 10;">
-            <i class="fas fa-arrow-left"></i> Back to Home
-        </a>
-        
-        <div class="auth-card glass fade-in">
-            <div class="auth-header">
-                <i class="fas fa-user-circle" style="font-size: 3rem; color: var(--primary-color); margin-bottom: 1rem;"></i>
-                <h2>Welcome Back</h2>
-                <p style="color: var(--text-muted); margin-top: 0.5rem;">Sign in to your parking account</p>
+
+    <div class="top-actions">
+        <a href="index.html" class="action-btn" title="Back to Home"><i class="fas fa-home"></i></a>
+        <div class="action-btn" id="themeToggle" title="Toggle Theme"><i class="fas fa-moon"></i></div>
+    </div>
+
+    <div class="login-wrapper">
+        <div class="login-left">
+            <div class="brand-logo">
+                <i class="fas fa-parking"></i>
+                SmartPark
             </div>
+
+            <h1 class="welcome-text">Enter the <span>Username Password</span></h1>
             
-            <div id="loginError" style="color: var(--danger); background: rgba(255, 71, 87, 0.1); padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem; display: none; text-align: center; font-size: 0.9rem; border: 1px solid var(--danger);"></div>
+            <div id="loginError"></div>
 
             <form id="loginForm">
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text" id="username" class="input-box" placeholder="Your username" required>
+                </div>
 
                 <div class="form-group">
-                    <input type="text" id="username" class="form-control" placeholder=" " required>
-                    <label for="username" class="floating-label">Username or Email</label>
+                    <label class="form-label">Password</label>
+                    <div style="position: relative;">
+                        <input type="password" id="password" class="input-box" placeholder="****************" required>
+                        <i class="fas fa-eye" style="position: absolute; right: 1.2rem; top: 1.1rem; color: #b2bec3; cursor: pointer;" id="togglePass"></i>
+                    </div>
                 </div>
-                
-                <div class="form-group">
-                    <input type="password" id="password" class="form-control" placeholder=" " required>
-                    <label for="password" class="floating-label">Password</label>
-                    <i class="fas fa-eye password-toggle"></i>
-                </div>
-                
-                <div style="display: flex; justify-content: space-between; margin-bottom: 1.5rem; font-size: 0.9rem;">
-                    <label style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-color);">
-                        <input type="checkbox"> Remember me
+
+                <div class="options-row">
+                    <label class="remember-me">
+                        <input type="checkbox"> Keep me logged in
                     </label>
-                    <a href="forgot-password.html" style="color: var(--primary-color); text-decoration: none;">Forgot Password?</a>
+                    <a href="forgot-password.html" class="forgot-link">Forgot Password?</a>
                 </div>
-                
-                <button type="submit" class="btn btn-primary" style="width: 100%;">Sign In</button>
+
+                <button type="submit" class="login-btn">Login</button>
             </form>
-            
-            <div style="text-align: center; margin-top: 2rem; font-size: 0.9rem; color: var(--text-color);">
-                Don't have an account? <a href="register-new.html" style="color: var(--primary-color); text-decoration: none; font-weight: 500;">Register here</a>
+
+            <div class="register-link">
+                Don't have an account? <a href="register-new.html">Create one here</a>
+            </div>
+        </div>
+
+        <div class="login-right">
+            <div class="image-container">
+                <img src="login_bg.png" alt="Modern car">
             </div>
         </div>
     </div>
@@ -58,37 +332,54 @@
     <script>
         const API_BASE = getAPI_BASE();
 
+        // Theme Toggle
+        const themeToggle = document.getElementById('themeToggle');
+        themeToggle.onclick = () => {
+            const currentTheme = document.body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.body.setAttribute('data-theme', newTheme);
+            
+            const icon = themeToggle.querySelector('i');
+            if (newTheme === 'dark') {
+                icon.classList.replace('fa-moon', 'fa-sun');
+            } else {
+                icon.classList.replace('fa-sun', 'fa-moon');
+            }
+        };
+
+        // Password Toggle
+        document.getElementById('togglePass').onclick = function() {
+            const passInput = document.getElementById('password');
+            if (passInput.type === 'password') {
+                passInput.type = 'text';
+                this.classList.replace('fa-eye', 'fa-eye-slash');
+            } else {
+                passInput.type = 'password';
+                this.classList.replace('fa-eye-slash', 'fa-eye');
+            }
+        };
+
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
             const errorDiv = document.getElementById('loginError');
-            
             errorDiv.style.display = 'none';
             const btn = e.target.querySelector('button');
             const originalText = btn.innerHTML;
-            
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Authenticating...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             btn.disabled = true;
-            
             try {
                 const res = await fetch(`${API_BASE}/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
                 });
-                
                 const result = await res.json();
                 if (result.status === 'success') {
-                    const userId = result.data.id;
-                    const userName = result.data.name || result.data.username;
-                    const userLogin = result.data.username;
-                    
-                    localStorage.setItem('user_id', userId);
-                    localStorage.setItem('username', userLogin);
-                    localStorage.setItem('user_name', userName);
-
+                    localStorage.setItem('user_id', result.data.id);
+                    localStorage.setItem('username', result.data.username);
+                    localStorage.setItem('user_name', result.data.name || result.data.username);
                     window.location.href = 'dashboard-new.html';
                 } else {
                     errorDiv.textContent = result.message || 'Invalid login credentials';
@@ -97,12 +388,11 @@
                     btn.disabled = false;
                 }
             } catch (err) {
-                errorDiv.textContent = 'Network error: ' + err.message;
+                errorDiv.textContent = 'Connection Error';
                 errorDiv.style.display = 'block';
                 btn.innerHTML = originalText;
                 btn.disabled = false;
             }
-
         });
     </script>
 </body>
